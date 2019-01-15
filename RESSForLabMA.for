@@ -54,7 +54,7 @@ C ----------------------------------------------------------------------C
       n_backstresses = (nprops - N_BASIC_PROPS) / TERM_PER_BACK
       IF (n_backstresses .EQ. 0) THEN
         PRINT *, "No backstresses defined, exiting!"
-        ! CALL XIT  ! Exit from analysis command in Abaqus
+        CALL XIT  ! Exit from analysis command in Abaqus
       END IF
 C
       ! Allocate the backstress related arrays
