@@ -1,3 +1,4 @@
 # Include only the .inp files in the testing folder
 testing/*
 !testing/*.inp
+!testing/readme.md
