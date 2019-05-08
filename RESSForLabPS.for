@@ -321,15 +321,16 @@ C ----------------------------------------------------------------------C
       END DO
 C ----------------------------------------------------------------------C
 C
-      ! Exit if did not converge
+      ! Reduce time increment if did not converge
 C
 C ----------------------------------------------------------------------C
       IF (it_num .EQ. MAX_ITERATIONS) THEN
         PRINT *, "WARNING: Return mapping in integration point ", npt,
      1  " of element ", noel, " did not converge."
-       CALL XIT
-        END IF
-        RETURN
+        PRINT *, "Reducing time increment to 1/10 of current value."
+        PNEWDT = 0.10
+      END IF
+      RETURN
         
       CONTAINS
 C ----------------------------------------------------------------------C
