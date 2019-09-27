@@ -168,8 +168,8 @@ C
       IF (it_num .EQ. MAX_ITERATIONS) THEN
         PRINT *, "WARNING: Return mapping in integration point ", npt,
      1  " of element ", noel, " did not converge."
-        PRINT *, "Reducing time increment to 1/10 of current value."
-        PNEWDT = 0.10
+        PRINT *, "Reducing time increment to 1/4 of current value."
+        PNEWDT = 0.25
       END IF
 
       RETURN

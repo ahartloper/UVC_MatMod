@@ -1,4 +1,6 @@
-# Include only the .inp files in the testing folder
-testing/*
-!testing/*.inp
-!testing/readme.md
+# Include only certain files in the testing folder
+*/testing/*
+!*/testing/*.inp
+!*/testing/readme.md
+!*/testing/*.tcl
+!*/testing/*.cpp
