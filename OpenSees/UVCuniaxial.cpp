@@ -4,7 +4,7 @@
 
 #include <cmath>
 #include <iostream>
-#include "UVCua.h"
+#include "UVCuniaxial.h"
 
 #include <elementAPI.h>
 #include <Channel.h>
@@ -28,17 +28,16 @@
 
 /* ------------------------------------------------------------------------ */
 
-static int numRESSCppLab = 0;
+static int numUVCuniaxial = 0;
 
 // NOTE: Do not use the OPS_GetNumRemainingInputArgs() function or the
 // OPS_GetString() function: causes crash with .dll
 OPS_Export
-void* OPS_RESSCppLab() {
-  if (numRESSCppLab == 0) {
-    // todo: add the reference here
-    std::cout << "Using the UVCua material, refer to: [INSERT REF]"
-      << std::endl;
-    numRESSCppLab++;
+void* OPS_UVCuniaxial() {
+  if (numUVCuniaxial == 0) {
+    std::cout << "Using the UVCuniaxial material, see "
+      "https://www.epfl.ch/labs/resslab/resslab-tools/" << std::endl;
+    numUVCuniaxial++;
   }
   UniaxialMaterial* theMaterial = 0;
 
@@ -51,7 +50,7 @@ void* OPS_RESSCppLab() {
   const unsigned int BACKSTRESS_SPACE = MAX_BACKSTRESSES * N_PARAM_PER_BACK;
 
   std::string inputInstructions = "Invalid args, want:\n"
-    "uniaxialMaterial UVCua "
+    "uniaxialMaterial UVCuniaxial "
     "tag? E? fy? QInf? b? DInf? a? "
     "N? C1? gamma1? <C2? gamma2? C3? gamma3? ... C8? gamma8?>\n"
     "Note: to neglect the updated model, set DInf = 0.0";
@@ -69,7 +68,7 @@ void* OPS_RESSCppLab() {
   // Get the material tag
   nInputsToRead = N_TAGS;
   if (OPS_GetIntInput(&nInputsToRead, materialTag) != 0) {
-    opserr << "WARNING invalid uniaxialMaterial UVCua tag" << endln;
+    opserr << "WARNING invalid uniaxialMaterial UVCuniaxial tag" << endln;
     return 0;
   }
 
@@ -114,7 +113,7 @@ void* OPS_RESSCppLab() {
   }
 
   // Allocate the material
-  theMaterial = new UVCua(materialTag[0],
+  theMaterial = new UVCuniaxial(materialTag[0],
     basicProps[0], basicProps[1],
     basicProps[2], basicProps[3],
     updProps[0], updProps[1],
@@ -140,7 +139,7 @@ void* OPS_RESSCppLab() {
  * @param cK backstress kinematic hardening moduli
  * @param gammaK controls the saturation rate of the kinematic hardening
  */
-UVCua::UVCua(int tag, double E, double sy0, double qInf, double b,
+UVCuniaxial::UVCuniaxial(int tag, double E, double sy0, double qInf, double b,
   double dInf, double a,
   std::vector<double> cK, std::vector<double> gammaK)
   : UniaxialMaterial(tag, MAT_TAG_RESSCppLab),
@@ -171,7 +170,7 @@ UVCua::UVCua(int tag, double E, double sy0, double qInf, double b,
 
 /* ------------------------------------------------------------------------ */
 
-UVCua::~UVCua() {
+UVCuniaxial::~UVCuniaxial() {
   // todo: figure out who deletes the copies!!!
 }
 
@@ -181,7 +180,7 @@ UVCua::~UVCua() {
  *
  * @param strainIncrement change in strain from the converged strain value
  */
-void UVCua::returnMapping(double strainIncrement){
+void UVCuniaxial::returnMapping(double strainIncrement){
 
   // Initialize all the variables
   bool converged = true;
@@ -258,7 +257,7 @@ void UVCua::returnMapping(double strainIncrement){
 
   // Warn the user if the algorithm did not converge
   if (iterationNumber == MAXIMUM_ITERATIONS - 1) {
-    std::cerr << "WARNING: return mapping in UVCua does not converge!"
+    std::cerr << "WARNING: return mapping in UVCuniaxial does not converge!"
       << endln;
     std::cerr << "\tExiting with phi = " << phi << " > " << RETURN_MAP_TOL
       << std::endl;
@@ -279,7 +278,7 @@ void UVCua::returnMapping(double strainIncrement){
 
 /* ------------------------------------------------------------------------ */
 
-void UVCua::calculateStiffness() {
+void UVCuniaxial::calculateStiffness() {
 
   if (!plasticLoading) {
     stiffnessTrial = elasticModulus;
@@ -309,7 +308,7 @@ void UVCua::calculateStiffness() {
  * @param strainRate new strain rate value
  * @return 0 if successful
  */
-int UVCua::setTrialStrain(double strain, double strainRate) {
+int UVCuniaxial::setTrialStrain(double strain, double strainRate) {
 
   // Reset the trial state
   revertToLastCommit();
@@ -327,25 +326,25 @@ int UVCua::setTrialStrain(double strain, double strainRate) {
 
 /* ------------------------------------------------------------------------ */
 
-double UVCua::getStrain() {
+double UVCuniaxial::getStrain() {
   return strainTrial;
 }
 
 /* ------------------------------------------------------------------------ */
 
-double UVCua::getStress() {
+double UVCuniaxial::getStress() {
   return stressTrial;
 }
 
 /* ------------------------------------------------------------------------ */
 
-double UVCua::getTangent() {
+double UVCuniaxial::getTangent() {
   return stiffnessTrial;
 }
 
 /* ------------------------------------------------------------------------ */
 
-double UVCua::getInitialTangent() {
+double UVCuniaxial::getInitialTangent() {
   return stiffnessInitial;
 }
 
@@ -355,7 +354,7 @@ double UVCua::getInitialTangent() {
  *
  * @return 0 if successful
  */
-int UVCua::commitState() {
+int UVCuniaxial::commitState() {
   strainConverged = strainTrial;
   strainPEqConverged = strainPEqTrial;
   stressConverged = stressTrial;
@@ -370,7 +369,7 @@ int UVCua::commitState() {
  *
  * @return 0 if successful
  */
-int UVCua::revertToLastCommit() {
+int UVCuniaxial::revertToLastCommit() {
   strainTrial = strainConverged;
   strainPEqTrial = strainPEqConverged;
   stressTrial = stressConverged;
@@ -385,7 +384,7 @@ int UVCua::revertToLastCommit() {
  *
  * @return 0 if successful
  */
-int UVCua::revertToStart() {
+int UVCuniaxial::revertToStart() {
   strainConverged = 0.;
   strainPEqConverged = 0.;
   stressConverged = 0.;
@@ -403,10 +402,10 @@ int UVCua::revertToStart() {
  * Returns a new UniaxialMaterial with all the internal values copied.
  * @return a to pointer to the copy
  */
-UniaxialMaterial* UVCua::getCopy() {
+UniaxialMaterial* UVCuniaxial::getCopy() {
 
-  UVCua* theCopy;  //todo: what deletes this?
-  theCopy = new UVCua(this->getTag(), elasticModulus,
+  UVCuniaxial* theCopy;  //todo: what deletes this?
+  theCopy = new UVCuniaxial(this->getTag(), elasticModulus,
     yieldStress, qInf, bIso,
     dInf, aIso,
     cK, gammaK);
@@ -437,7 +436,7 @@ UniaxialMaterial* UVCua::getCopy() {
  * @param theChannel
  * @return 0 if successful
  */
-int UVCua::sendSelf(int commitTag, Channel &theChannel) {
+int UVCuniaxial::sendSelf(int commitTag, Channel &theChannel) {
 
   static Vector data(26);  // enough space for 4 backstresses
   // Material properties
@@ -470,7 +469,7 @@ int UVCua::sendSelf(int commitTag, Channel &theChannel) {
   data(25) = this->getTag();
 
   if (theChannel.sendVector(this->getDbTag(), commitTag, data) < 0) {
-    opserr << "UVCua::sendSelf() - failed to sendSelf\n";
+    opserr << "UVCuniaxial::sendSelf() - failed to sendSelf\n";
     return -1;
   }
   return 0;
@@ -485,12 +484,12 @@ int UVCua::sendSelf(int commitTag, Channel &theChannel) {
  * @param theBroker
  * @return 0 if successful
  */
-int UVCua::recvSelf(int commitTag, Channel &theChannel,
+int UVCuniaxial::recvSelf(int commitTag, Channel &theChannel,
   FEM_ObjectBroker &theBroker) {
   static Vector data(26);
 
   if (theChannel.recvVector(this->getDbTag(), commitTag, data) < 0) {
-    opserr << "UVCua::recvSelf() - failed to recvSelf\n";
+    opserr << "UVCuniaxial::recvSelf() - failed to recvSelf\n";
     return -1;
   }
 
@@ -537,12 +536,12 @@ int UVCua::recvSelf(int commitTag, Channel &theChannel,
  * @param flag is 2 for standard output, 25000 for JSON output
  (see OPS_Globals.h)
  */
-void UVCua::Print(OPS_Stream &s, int flag) {
+void UVCuniaxial::Print(OPS_Stream &s, int flag) {
 
   // todo: change these back when not only .dll
   // if (flag == OPS_PRINT_PRINTMODEL_MATERIAL) {
   if (flag == 2) {
-    s << "UVCua tag: " << this->getTag() << endln;
+    s << "UVCuniaxial tag: " << this->getTag() << endln;
     s << "   E: " << elasticModulus << " ";
     s << "  fy: " << yieldStress << " ";
     s << "   Q: " << qInf << " ";
@@ -557,7 +556,7 @@ void UVCua::Print(OPS_Stream &s, int flag) {
   if (flag == 25000) {
     s << "\t\t\t{";
     s << "\"name\": \"" << this->getTag() << "\", ";
-    s << "\"type\": \"UVCua\", ";
+    s << "\"type\": \"UVCuniaxial\", ";
     s << "\"E\": " << elasticModulus << ", ";
     s << "\"fy\": " << yieldStress << ", ";
     s << "\"Q\": " << qInf << ", ";
@@ -580,7 +579,7 @@ void UVCua::Print(OPS_Stream &s, int flag) {
 */
 // From: https ://stackoverflow.com/a/4609795
 
-template <typename T> int UVCua::sgn(T val) {
+template <typename T> int UVCuniaxial::sgn(T val) {
   return (T(0) < val) - (val < T(0));
 }
 

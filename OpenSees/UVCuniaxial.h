@@ -12,7 +12,7 @@
 
 /* ------------------------------------------------------------------------ */
 
-class UVCua : public UniaxialMaterial
+class UVCuniaxial : public UniaxialMaterial
 {
 
   /* ------------------------------------------------------------------------ */
@@ -21,11 +21,11 @@ class UVCua : public UniaxialMaterial
 
 public:
   //! Constructor
-  UVCua(int tag, double E, double sy0, double qInf, double b,
+  UVCuniaxial(int tag, double E, double sy0, double qInf, double b,
     double dInf, double a,
     std::vector<double> cK, std::vector<double> gammaK);
   //! Destructor
-  ~UVCua();
+  ~UVCuniaxial();
 
   /* ------------------------------------------------------------------------ */
   /* Methods                                                                  */
@@ -33,7 +33,7 @@ public:
 
 public:
   //! Returns the class type
-  const char *getClassType(void) const { return "UVCua"; };
+  const char *getClassType(void) const { return "UVCuniaxial"; };
 
   //! Calculates the trail strain and stress
   int setTrialStrain(double strain, double strainRate = 0);

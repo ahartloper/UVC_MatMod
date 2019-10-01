@@ -1,9 +1,9 @@
 //
-// Created by Alex Hartloper on 10.07.18.
+// Created by Alex Hartloper on 09.07.18.
 //
 
-#ifndef CPP_UVC_PS_H
-#define CPP_UVC_PS_H
+#ifndef CPP_UVC_MA_H
+#define CPP_UVC_MA_H
 
 #include <vector>
 #include "NDMaterial.h"
@@ -12,9 +12,10 @@
 #include "Matrix.h"
 #include "Vector.h"
 
+
 /* ------------------------------------------------------------------------ */
 
-class UVCps : public NDMaterial
+class UVCmultiaxial : public NDMaterial
 {
 
   /* ------------------------------------------------------------------------ */
@@ -23,15 +24,15 @@ class UVCps : public NDMaterial
 
 public:
   //! Constructor, called by clients
-  UVCps(int tag, double E, double poissonRatio, double sy0,
+  UVCmultiaxial(int tag, double E, double poissonRatio, double sy0, 
     double qInf, double b, double dInf, double a,
     std::vector<double> cK, std::vector<double> gammaK);
 
   //! Constructor, parallel processing
-  UVCps(void);
+  UVCmultiaxial(void);
 
   //! Destructor
-  ~UVCps();
+  ~UVCmultiaxial();
 
   /* ------------------------------------------------------------------------ */
   /* Methods                                                                  */
@@ -39,13 +40,13 @@ public:
 
 public:
   //! Returns the class type
-  const char *getClassType(void) const { return "UVCps"; };
+  const char *getClassType(void) const { return "UVCmultiaxial"; };
 
   //! Returns the type of ND material
-  const char* getType() const { return "PlaneStress"; };
+  const char* getType() const { return "ThreeDimensional"; };
 
   //! Returns the number of vector components 
-  int getOrder() const { return N_DIMS; };
+  int getOrder() const { return 6; };
 
   //! Calculates the trial strain and stress, provided the total strain
   int setTrialStrain(const Vector &v);
@@ -81,7 +82,7 @@ public:
   int revertToStart(void);
 
   //! Returns a copy of the material in the current state
-  NDMaterial *getCopy(void);
+  NDMaterial *getCopy(void); 
 
   //! Returns a copy of the material without copying the state variables
   NDMaterial *getCopy(const char *code);
@@ -101,20 +102,14 @@ private:
   int returnMapping();
 
   //! Sets the elastoplastic tangent modulus based on the trial state
-  void calculateStiffness(double consistParam, double fBar, 
-    const Vector &stressRelative);
+  void calculateStiffness(double plasticMultiplier, double stressRelativeNorm, 
+    Vector alphaDiff);
 
-  //! Returns the dot product of two length 3 vectors
-  double dotprod3(const Vector &v1, const Vector &v2);
+  //! Returns the equivalent dot product of a 2nd order symmetric tensor
+  double dotprod6(Vector v1, Vector v2);
 
   //! Calculates the elastic stiffness matrix
   void calculateElasticStiffness(void);
-
-  //! Calculates the compliance matrix
-  Matrix calculateComplianceMatrix(void);
-
-  //! Initialize eigendecomposition matrices and diagonal matrices
-  void initializeEigendecompositions(void);
 
   //! Returns the current yield stress
   double calculateYieldStress(void);
@@ -126,14 +121,6 @@ private:
   // todo: inline this?
   double calculateEk(unsigned int i);
 
-  //! Returns the component wise multiplication of two length 3 vectors
-  // todo: inline this?
-  Vector vecMult3(const Vector &v1, const Vector &v2);
-
-  //! Returns the inverse of a 3x3 matrix
-  // todo: inline this?
-  Matrix matinv3(const Matrix &m);
-
   /* ------------------------------------------------------------------------ */
   /* Members                                                                  */
   /* ------------------------------------------------------------------------ */
@@ -142,10 +129,10 @@ private:
   // Parameters
   const unsigned int N_BASIC_PARAMS = 5;
   const unsigned int N_PARAM_PER_BACK = 2;
-  const double RETURN_MAP_TOL = 1.0e-9;
+  const double RETURN_MAP_TOL = 1.0e-10;
   const unsigned int MAXIMUM_ITERATIONS = 1000;
-  const unsigned int N_DIRECT = 2;
-  const unsigned int N_DIMS = 3;
+  const unsigned int N_DIRECT = 3;
+  const unsigned int N_DIMS = 6;
 
   // Material properties, set by the constructor
   double elasticModulus;
@@ -176,16 +163,10 @@ private:
   std::vector<Vector> alphaKTrial;
   Matrix stiffnessConverged;
   Matrix stiffnessTrial;
+  Vector flowNormal;
   bool plasticLoading;
-
-  // Eigendecomposition matrices
-  Matrix pMat;
-  Matrix qMat;
-  Matrix qMatT;  // transpose
-  Vector lambdaC;
-  Vector lambdaP;
 };
 
 /* ------------------------------------------------------------------------ */
 
-#endif //CPP_UVC_PS_H
+#endif //CPP_UVC_MA_H

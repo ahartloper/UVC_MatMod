@@ -20,9 +20,9 @@ fix  4  1 1 0
  
 # material
 #nDMaterial ElasticIsotropic 1 179800.0 0.0
-nDMaterial RESSCppLabMA 1 179800.0 0.3 318.5 100.7 8.0 0.0 1.0 2 11608.2 145.2 1026.0 4.7
+nDMaterial UVCmultiaxial 1 179800.0 0.3 318.5 100.7 8.0 0.0 1.0 2 11608.2 145.2 1026.0 4.7
  
-# brick elements -> reduced integration brick element
+# brick element
 element SSPbrick 1  1 2 3 4 5 6 7 8 1
  
 # surface load elements
@@ -30,13 +30,11 @@ set appliedStress 318.5
 element SurfaceLoad 2  5 6 7 8  $appliedStress 
  
 # recorders
-#recorder Element -file ./Data/stress_Elastic.out    -ele  1  stress
-#recorder Element -file ./Data/strain_Elastic.out    -ele  1  strain
-recorder Element -file ./Data/stress_RESSCppLabMA.out    -ele  1  stress
-recorder Element -file ./Data/strain_RESSCppLabMA.out    -ele  1  strain
+# Check the "22" components of stress and strain in the output
+recorder Element -file ./Output_Data/3d_Brick_test_stress.out    -ele  1  stress
+recorder Element -file ./Output_Data/3d_Brick_test_strain.out    -ele  1  strain
  
 # load pattern
-#timeSeries Linear 1
 timeSeries Path 1 -time {0.0 0.2 0.4 0.6 0.8 1.0 1.2} -values {0.0 1.0 1.5 -1.5 2.0 -2.0 0.0}
 pattern Plain 1 1 {
 	eleLoad -ele 2 -type -surfaceLoad

@@ -1,8 +1,8 @@
 //
-// Created by Alex Hartloper on 10.07.18.
+// Created by Alex Hartloper on 09.07.18.
 //
 
-#include "UVCps.h"
+#include "UVCmultiaxial.h"
 
 #include <cmath>
 #include <iostream>
@@ -15,6 +15,7 @@
 #include <elementAPI.h>
 #include <OPS_Globals.h>
 
+#include "classTags.h"
 /* ----------------------------------------------------------------------------------------------------------------- */
 // For shared library usage
 // todo: make the definition if Linux
@@ -29,17 +30,16 @@
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-static int numRESSCppLabPS = 0;
+static int numUVCmultiaxial = 0;
 
 // NOTE: Do not use the OPS_GetNumRemainingInputArgs() function or the
 // OPS_GetString() function: causes crash with .dll
 OPS_Export
-void* OPS_RESSCppLabPS(void) {
-  if (numRESSCppLabPS == 0) {
-    // todo: add the reference here
-    std::cout << "Using the UVCps material, refer to: [INSERT REF]"
-      << std::endl;
-    numRESSCppLabPS++;
+void* OPS_UVCmultiaxial(void) {
+  if (numUVCmultiaxial == 0) {
+    std::cout << "Using the UVCmultiaxial material, see "
+      "https://www.epfl.ch/labs/resslab/resslab-tools/" << std::endl;
+    numUVCmultiaxial++;
   }
   NDMaterial* theMaterial = 0;
 
@@ -52,7 +52,7 @@ void* OPS_RESSCppLabPS(void) {
   const unsigned int BACKSTRESS_SPACE = MAX_BACKSTRESSES * N_PARAM_PER_BACK;
 
   std::string inputInstructions = "Invalid args, want:\n"
-    "uniaxialMaterial UVCps "
+    "nDMaterial UVCmultiaxial "
     "tag? E? nu? fy? QInf? b? DInf? a? "
     "N? C1? gamma1? <C2? gamma2? C3? gamma3? ... C8? gamma8?>\n"
     "Note: to neglect the updated model, set DInf = 0.0";
@@ -70,7 +70,7 @@ void* OPS_RESSCppLabPS(void) {
   // Get the material tag
   nInputsToRead = N_TAGS;
   if (OPS_GetIntInput(&nInputsToRead, materialTag) != 0) {
-    opserr << "WARNING invalid uniaxialMaterial UVCps tag" << endln;
+    opserr << "WARNING invalid nDMaterial UVCmultiaxial tag" << endln;
     return 0;
   }
 
@@ -115,7 +115,7 @@ void* OPS_RESSCppLabPS(void) {
   }
 
   // Allocate the material
-  theMaterial = new UVCps(materialTag[0],
+  theMaterial = new UVCmultiaxial(materialTag[0],
     basicProps[0], basicProps[1], basicProps[2],
     basicProps[3], basicProps[4],
     updProps[0], updProps[1],
@@ -142,11 +142,11 @@ nonzero
 * @param cK backstress kinematic hardening moduli
 * @param gammaK controls the saturation rate of the kinematic hardening
 */
-UVCps::UVCps(int tag, double E, double poissonRatio,
+UVCmultiaxial::UVCmultiaxial(int tag, double E, double poissonRatio,
   double sy0, double qInf, double b,
   double dInf, double a,
   std::vector<double> cK, std::vector<double> gammaK)
-  : NDMaterial(tag, ND_TAG_RESSCppLabPS),
+  : NDMaterial(tag, ND_TAG_RESSCppLabMA),
   elasticModulus(E),
   poissonRatio(poissonRatio),
   initialYield(sy0),
@@ -166,16 +166,12 @@ UVCps::UVCps(int tag, double E, double poissonRatio,
   strainPEqTrial(0.),
   stressConverged(N_DIMS),
   stressTrial(N_DIMS),
+  flowNormal(N_DIMS),
   plasticLoading(false),
   elasticMatrix(Matrix(N_DIMS, N_DIMS)),
   stiffnessInitial(Matrix(N_DIMS, N_DIMS)),
   stiffnessConverged(Matrix(N_DIMS, N_DIMS)),
-  stiffnessTrial(Matrix(N_DIMS, N_DIMS)),
-  pMat(Matrix(N_DIMS, N_DIMS)),
-  qMat(Matrix(N_DIMS, N_DIMS)),
-  qMatT(Matrix(N_DIMS, N_DIMS)),
-  lambdaC(N_DIMS),
-  lambdaP(N_DIMS)
+  stiffnessTrial(Matrix(N_DIMS, N_DIMS))
 {
   // Set the number of backstresses
   nBackstresses = cK.size();
@@ -187,9 +183,6 @@ UVCps::UVCps(int tag, double E, double poissonRatio,
   // Zero all the vectors and matrices
   revertToStart();
 
-  // Set the Eigendecomposition matrices
-  initializeEigendecompositions();
-
   // Set elastic parameters and elastic stiffness matrix
   calculateElasticStiffness();
   stiffnessInitial = elasticMatrix;
@@ -199,8 +192,8 @@ UVCps::UVCps(int tag, double E, double poissonRatio,
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-UVCps::UVCps()
-  : NDMaterial(0, ND_TAG_RESSCppLabPS),
+UVCmultiaxial::UVCmultiaxial()
+  : NDMaterial(0, ND_TAG_RESSCppLabMA),
   elasticModulus(0.),
   poissonRatio(0.),
   initialYield(0.),
@@ -212,24 +205,20 @@ UVCps::UVCps()
   gammaK(0.),
   shearModulus(0. / (2. * (1. + poissonRatio))),
   bulkModulus(0. / (3. * (1. - 2. * poissonRatio))),
-  strainConverged(N_DIMS),
-  strainTrial(N_DIMS),
-  strainPlasticConverged(N_DIMS),
-  strainPlasticTrial(N_DIMS),
+  strainConverged(Vector(N_DIMS)),
+  strainTrial(Vector(N_DIMS)),
+  strainPlasticConverged(Vector(N_DIMS)),
+  strainPlasticTrial(Vector(N_DIMS)),
   strainPEqConverged(0.),
   strainPEqTrial(0.),
-  stressConverged(N_DIMS),
-  stressTrial(N_DIMS),
+  stressConverged(Vector(N_DIMS)),
+  stressTrial(Vector(N_DIMS)),
+  flowNormal(Vector(N_DIMS)),
   plasticLoading(false),
   elasticMatrix(Matrix(N_DIMS, N_DIMS)),
   stiffnessInitial(Matrix(N_DIMS, N_DIMS)),
   stiffnessConverged(Matrix(N_DIMS, N_DIMS)),
-  stiffnessTrial(Matrix(N_DIMS, N_DIMS)),
-  pMat(Matrix(N_DIMS, N_DIMS)),
-  qMat(Matrix(N_DIMS, N_DIMS)),
-  qMatT(Matrix(N_DIMS, N_DIMS)),
-  lambdaC(N_DIMS),
-  lambdaP(N_DIMS)
+  stiffnessTrial(Matrix(N_DIMS, N_DIMS))
 {
   // Set the number of backstresses
   // todo: this probably wont work with parallel processing?
@@ -239,13 +228,7 @@ UVCps::UVCps()
     alphaKConverged.push_back(Vector(N_DIMS));
   }
 
-  // Zero all the vectors and matrices
-  revertToStart();
-
-  // Set the Eigendecomposition matrices
-  initializeEigendecompositions();
-
-  // Set elastic stiffness matrix
+  // Set elastic parameters and elastic stiffness matrix
   calculateElasticStiffness();
   stiffnessInitial = elasticMatrix;
   stiffnessTrial = elasticMatrix;
@@ -254,45 +237,53 @@ UVCps::UVCps()
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-UVCps::~UVCps() {
+UVCmultiaxial::~UVCmultiaxial() {
 
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-/**
-*
-* @return 0 if successful
-*/
-int UVCps::returnMapping(){
+int UVCmultiaxial::returnMapping(){
   // Initialize all the variables
-  int retVal = 0;
+  int ret_val = 0;
   bool converged = true;
   unsigned int iterationNumber = 0;
+  double sigmaY1 = 0.;
+  double sigmaY2 = 0.;
+
   Vector alpha = Vector(N_DIMS);
+  Vector alphaUpd = Vector(N_DIMS);
   Vector stressRelative = Vector(N_DIMS);
-  Vector etaTrial = Vector(N_DIMS);
-  Vector etaTilde = Vector(N_DIMS);
-  Vector eta = Vector(N_DIMS);
-  Vector alphaTilde = Vector(N_DIMS);
-  Vector alphaTildePrime = Vector(N_DIMS);
-  Vector gammaDiag = Vector(N_DIMS);
-  Vector gammaDiagPrime = Vector(N_DIMS);
-  double yieldFunction = 0., yieldStress = 0., consistParam = 0., isotropicModulus = 0., eK = 0.,
-    consistDenom = 0., fBarSquared = 0., fBar = 0., beta = 0., gammaDenom = 0., betaPrime = 0.;
+  Vector stressDeviatoric = Vector(N_DIMS);
+  Vector alphaDiff = Vector(N_DIMS);
+  double yieldFunction;
+  double yieldStress;
+  double stressRelativeNorm;
+  double stressHydro;
+  double consistParam = 0.;
+  double isotropicModulus;
+  double eK;
+  double kinematicModulus;
+  double aDotN;
+  double pMultNumer, pMultDenom;
 
   // Elastic trial step
   alpha.Zero();
   for (unsigned int i = 0; i < nBackstresses; ++i)
     alpha = alpha + alphaKConverged[i];
   stressTrial = elasticMatrix * (strainTrial - strainPlasticConverged);
-  etaTrial = qMatT * (stressTrial - alpha);
-  eta = etaTrial;
-  
+  stressHydro = (stressTrial(0) + stressTrial(1) + stressTrial(2)) / 3.;
+  stressDeviatoric = stressTrial;
+  for (unsigned int i = 0; i < N_DIRECT; ++i)
+    stressDeviatoric[i] = stressTrial[i] - stressHydro;
+  stressRelative = stressDeviatoric - alpha;
+  stressRelativeNorm = sqrt(dotprod6(stressRelative, stressRelative));
+  flowNormal = stressRelative / (RETURN_MAP_TOL + stressRelativeNorm);
+
   // Yield condition
   yieldStress = calculateYieldStress();
-  fBarSquared = 1. / 3. * pow(eta(0), 2) + pow(eta(1), 2) + 2. * pow(eta(2), 2);
-  yieldFunction = 1. / 2. * fBarSquared - 1. / 3. * pow(yieldStress, 2);
+  isotropicModulus = calculateIsotropicModulus();
+  yieldFunction = stressRelativeNorm - sqrt(2. / 3.) * yieldStress;
   if (yieldFunction > RETURN_MAP_TOL) {
     converged = false;
   }
@@ -305,136 +296,107 @@ int UVCps::returnMapping(){
     yieldStress = calculateYieldStress();
     isotropicModulus = calculateIsotropicModulus();
     // Kinematic hardening parameters
-    beta = 0.;
-    alphaTilde.Zero();
+    kinematicModulus = 0.;
+    alphaUpd.Zero();
     for (unsigned int i = 0; i < nBackstresses; ++i) {
       eK = calculateEk(i);
-      beta += cK[i] / gammaK[i] * (1. - eK);
-      alphaTilde += alphaKConverged[i] * eK;
+      kinematicModulus += cK[i] * eK - sqrt(2. / 3.) * gammaK[i] * eK * dotprod6(flowNormal, alphaKConverged[i]);
+      alphaUpd += eK * alphaKConverged[i] + sqrt(2. / 3.) * cK[i] / gammaK[i] * (1. - eK) * flowNormal;
     }
-    alphaTilde = alpha - alphaTilde;
-    beta = 1. + beta / yieldStress;
+    aDotN = dotprod6(alphaUpd - alpha, flowNormal);
 
-    // Update the relative stress and eta
-    gammaDenom = beta + 2. * shearModulus * consistParam;
-    gammaDiag(0) = 1. / (beta + consistParam * elasticModulus / (3. * (1. - poissonRatio)));
-    gammaDiag(1) = 1. / gammaDenom;
-    gammaDiag(2) = 1. / gammaDenom;
+    // Local Newton step
+    pMultNumer = stressRelativeNorm - (2. * shearModulus * consistParam + sqrt(2. / 3.) * yieldStress + aDotN);
+    pMultDenom = -2.0 * shearModulus * (1. + (kinematicModulus + isotropicModulus) / (3. * shearModulus));
+    consistParam = consistParam - pMultNumer / pMultDenom;
+    strainPEqTrial = strainPEqConverged + sqrt(2. / 3.) * consistParam;
 
-
-    etaTilde = etaTrial + qMatT * alphaTilde;
-    eta = vecMult3(etaTilde, gammaDiag);
-    fBarSquared = 1. / 3. * pow(eta(0), 2) + pow(eta(1), 2) + 2. * pow(eta(2), 2);
-    fBar = sqrt(fBarSquared);
-
-    // Calculate Newton denominator
-    betaPrime = 0.;
-    alphaTildePrime.Zero();
-    for (unsigned int i = 0; i < nBackstresses; ++i) {
-      eK = calculateEk(i);
-      betaPrime = betaPrime - cK[i] * isotropicModulus / (gammaK[i] * pow(yieldStress, 2)) * (1. - eK)
-        + cK[i] * eK / yieldStress;
-      alphaTildePrime = alphaTildePrime + gammaK[i] * eK * alphaKConverged[i];
-    }
-    betaPrime = betaPrime * sqrt(2. / 3.) * fBar;
-    alphaTildePrime = alphaTildePrime * sqrt(2. / 3.) * fBar;
-    for (unsigned int i = 0; i < N_DIMS; ++i)
-      gammaDiagPrime(i) = -pow(gammaDiag(i), 2) * (betaPrime + lambdaP(i) * lambdaC(i));
-
-    consistDenom = dotprod3(vecMult3(lambdaP, eta),
-      vecMult3(gammaDiagPrime, etaTilde) + vecMult3(gammaDiag, qMatT * alphaTildePrime))
-      - sqrt(2. / 3.) * 2. / 3. * yieldStress * isotropicModulus * fBar;
-
-    // Newton step
-    yieldFunction = 1. / 2. * fBarSquared - 1. / 3. * pow(yieldStress, 2);
-    consistParam = consistParam - yieldFunction / (consistDenom + RETURN_MAP_TOL);
-    strainPEqTrial = strainPEqConverged + sqrt(2. / 3.) * consistParam * fBar;
-    
     // Check convergence
-    if (abs(yieldFunction) < RETURN_MAP_TOL) {
+    if (abs(pMultNumer) < RETURN_MAP_TOL) {
       converged = true;
     }
   }
-  
+
   // Condition for plastic loading is whether or not iterations were performed
   if (iterationNumber == 0) {
     plasticLoading = false;
   }
   else {
-    // Update the variables
     plasticLoading = true;
-    etaTilde = etaTrial + qMatT * alphaTilde;
-    eta = vecMult3(gammaDiag, etaTilde);
-    stressRelative = qMat * eta;
-    yieldStress = calculateYieldStress();
+    // Update the internal variables
+    for (unsigned int i = 0; i < N_DIRECT; ++i)
+      strainPlasticTrial(i) = strainPlasticConverged(i) + consistParam * flowNormal(i);
+    for (unsigned int i = N_DIRECT; i < N_DIMS; ++i)  // 2x since engineering strain definition
+      strainPlasticTrial(i) = strainPlasticConverged(i) + 2. * consistParam * flowNormal(i);
+    stressTrial = elasticMatrix * (strainTrial - strainPlasticTrial);
     for (unsigned int i = 0; i < nBackstresses; ++i) {
       eK = calculateEk(i);
-      alphaKTrial[i] = alphaKConverged[i] * eK + stressRelative / yieldStress * cK[i] / gammaK[i] * (1. - eK);
+      alphaKTrial[i] = eK * alphaKConverged[i] + sqrt(2. / 3.) * cK[i] / gammaK[i] * (1. - eK) * flowNormal;
     }
-    strainPlasticTrial = strainPlasticConverged + consistParam * pMat * stressRelative;
-    stressTrial = elasticMatrix * (strainTrial - strainPlasticTrial);
+    alphaDiff = alphaUpd - alpha;
   }
 
   // Update the stiffness
-  calculateStiffness(consistParam, fBar, stressRelative);
+  calculateStiffness(consistParam, stressRelativeNorm, alphaDiff);
 
-  // Warn the user if the algorithm did not converge and return -1
-  if (iterationNumber >= MAXIMUM_ITERATIONS && abs(yieldFunction) > RETURN_MAP_TOL) {
-    std::cerr << "UVCps::returnMapping return mapping in UVCps did not converge!" << endln;
-    std::cerr << "\tExiting with yield function = " << yieldFunction << " > " << RETURN_MAP_TOL << std::endl;
-    retVal = -1;
+  // Warn the user if the algorithm did not converge
+  if (iterationNumber >= MAXIMUM_ITERATIONS - 1) {
+    std::cerr << "UVCmultiaxial::returnMapping return mapping in UVCmultiaxial did not converge!" << endln;
+    std::cerr << "\tDelta epsilon 11 = " << strainTrial[0] - strainConverged[0] << std::endl;
+    std::cerr << "\tDelta epsilon 22 = " << strainTrial[1] - strainConverged[1] << std::endl;
+    std::cerr << "\tDelta epsilon 12 = " << strainTrial[3] - strainConverged[3] << std::endl;
+    std::cerr << "\tExiting with yield function = " << pMultNumer << " > " << RETURN_MAP_TOL << std::endl;
+    ret_val = -1;
   }
 
-  return retVal;
+  return ret_val;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-void UVCps::calculateStiffness(double consistParam, double fBar, const Vector &stressRelative) {
+void UVCmultiaxial::calculateStiffness(double consistParam, double stressRelativeNorm, Vector alphaDiff) {
   if (!plasticLoading) {
     stiffnessTrial = elasticMatrix;
   }
   else  // plastic loading
   {
-    double yieldStress = 0., isotropicModulus = 0., eK = 0., beta = 0., theta_2 = 0., theta_1 = 0.;
-    Vector hPrime = Vector(N_DIMS), nHat = Vector(N_DIMS), nTilde = Vector(N_DIMS), hTilde = Vector(N_DIMS);
-    Matrix complianceMatrix = Matrix(N_DIMS, N_DIMS), hOutN = Matrix(N_DIMS, N_DIMS), iD3 = Matrix(N_DIMS, N_DIMS),
-      aMat = Matrix(N_DIMS, N_DIMS), xiTilde = Matrix(N_DIMS, N_DIMS), xiTildeA = Matrix(N_DIMS, N_DIMS),
-      nOutN = Matrix(N_DIMS, N_DIMS);
-
-    iD3.Zero();
-    iD3(0, 0) = iD3(1, 1) = iD3(2, 2) = 1.;
-    complianceMatrix = calculateComplianceMatrix();
+    double yieldStress, isotropicModulus, kinematicModulus, eK, beta, theta_1, theta_2, theta_3,
+      id2OutId2, nOutN, alphaOutN;
+    // 2nd order identity tensor
+    std::vector<double> id2 = { 1.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
+    // Symmetric 4th order identity tensor
+    Matrix id4 = Matrix(N_DIMS, N_DIMS);
+    for (unsigned int i = 0; i < N_DIRECT; ++i)
+      id4(i, i) = 1.0;
+    for (unsigned int i = N_DIRECT; i < N_DIMS; ++i)
+      id4(i, i) = 1.0 / 2.0;
 
     // Isotropic hardening parameters
     yieldStress = calculateYieldStress();
     isotropicModulus = calculateIsotropicModulus();
-
-    // Kinematic hardening related parameters
-    nHat = stressRelative / fBar;
-    for (unsigned int i = 0; i < nBackstresses; ++i)
-      beta += cK[i] / gammaK[i] * (1. - eK);
-    beta = 1. + beta / yieldStress;
-    hPrime = -(beta - 1.) * isotropicModulus * stressRelative / yieldStress;
+    // Kinematic hardening parameters
+    kinematicModulus = 0.;
     for (unsigned int i = 0; i < nBackstresses; ++i) {
       eK = calculateEk(i);
-      hPrime += cK[i] * eK / yieldStress * stressRelative - gammaK[i] * eK * alphaKConverged[i];
+      kinematicModulus += cK[i] * eK - sqrt(2. / 3.) * gammaK[i] * eK * dotprod6(flowNormal, alphaKConverged[i]);
     }
-    hPrime *= sqrt(2. / 3.);
-    hOutN = hPrime % nHat;
-    aMat = matinv3(beta * iD3 + consistParam * hOutN * pMat);
 
-    nTilde = nHat - consistParam * aMat * hPrime;
-    xiTilde = matinv3(complianceMatrix + consistParam * pMat * aMat);
-    xiTildeA = aMat * xiTilde;
-
-    theta_2 = 1. - 2. / 3. * isotropicModulus * consistParam;
-    hTilde = hPrime + xiTilde * (pMat * nTilde);
-    theta_1 = 2. / 3. * isotropicModulus + theta_2 * dotprod3(nHat, pMat * (aMat * hTilde));
-    nOutN = nTilde % nHat;
+    beta = 1.0 + (kinematicModulus + isotropicModulus) / (3.0 * shearModulus);
+    theta_1 = 1.0 - 2.0 * shearModulus * consistParam / stressRelativeNorm;
+    theta_3 = 1.0 / (beta * stressRelativeNorm);
+    theta_2 = 1.0 / beta + (dotprod6(flowNormal, alphaDiff)) * theta_3 - (1.0 - theta_1);
     stiffnessTrial.Zero();
-    stiffnessTrial = xiTilde - theta_2 / theta_1 * xiTilde * pMat * nOutN * pMat * xiTildeA;
-
+    for (unsigned int i = 0; i < N_DIMS; ++i) {
+      for (unsigned int j = 0; j < N_DIMS; ++j) {
+        id2OutId2 = id2[i] * id2[j];
+        nOutN = flowNormal[i] * flowNormal[j];
+        alphaOutN = alphaDiff[i] * flowNormal[j];
+        stiffnessTrial(i, j) = bulkModulus * id2OutId2
+          + 2. * shearModulus * theta_1 * (id4(i, j) - 1. / 3. * id2OutId2)
+          - 2. * shearModulus * theta_2 * nOutN
+          + 2. * shearModulus * theta_3 * alphaOutN;
+      }
+    }
     // Take the symmetric approximation
     stiffnessTrial.addMatrixTranspose(0.5, stiffnessTrial, 0.5);
   }
@@ -448,8 +410,7 @@ void UVCps::calculateStiffness(double consistParam, double fBar, const Vector &s
 * @param v new total strain vector.
 * @return 0 if successful, -1 if return mapping did not converge.
 */
-int UVCps::setTrialStrain(const Vector &v) {
-
+int UVCmultiaxial::setTrialStrain(const Vector &v) {
   int rm_convergence;
   // Reset the trial state
   revertToLastCommit();
@@ -473,7 +434,7 @@ int UVCps::setTrialStrain(const Vector &v) {
 *
 * Note that this material model is rate independent.
 */
-int UVCps::setTrialStrain(const Vector &v, const Vector &r) {
+int UVCmultiaxial::setTrialStrain(const Vector &v, const Vector &r) {
 
   // Reset the trial state
   revertToLastCommit();
@@ -494,7 +455,7 @@ int UVCps::setTrialStrain(const Vector &v, const Vector &r) {
 * @param v strain increment vector
 * @return 0 if successful
 */
-int UVCps::setTrialStrainIncr(const Vector &v) {
+int UVCmultiaxial::setTrialStrainIncr(const Vector &v) {
 
   // Reset the trial state
   revertToLastCommit();
@@ -518,7 +479,7 @@ int UVCps::setTrialStrainIncr(const Vector &v) {
 *
 * Note that this material model is rate independent.
 */
-int UVCps::setTrialStrainIncr(const Vector &v, const Vector &r) {
+int UVCmultiaxial::setTrialStrainIncr(const Vector &v, const Vector &r) {
 
   // Reset the trial state
   revertToLastCommit();
@@ -535,25 +496,25 @@ int UVCps::setTrialStrainIncr(const Vector &v, const Vector &r) {
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-const Vector &UVCps::getStrain() {
+const Vector &UVCmultiaxial::getStrain() {
   return strainTrial;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-const Vector &UVCps::getStress() {
+const Vector &UVCmultiaxial::getStress() {
   return stressTrial;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-const Matrix &UVCps::getTangent() {
+const Matrix &UVCmultiaxial::getTangent() {
   return stiffnessTrial;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-const Matrix &UVCps::getInitialTangent() {
+const Matrix &UVCmultiaxial::getInitialTangent() {
   // todo: can make more efficient by changing this to elasticMatrix and removing stiffnessInitial as a variable
   return stiffnessInitial;
 }
@@ -564,7 +525,7 @@ const Matrix &UVCps::getInitialTangent() {
 *
 * @return 0 if successful
 */
-int UVCps::commitState() {
+int UVCmultiaxial::commitState() {
   strainConverged = strainTrial;
   strainPlasticConverged = strainPlasticTrial;
   strainPEqConverged = strainPEqTrial;
@@ -580,7 +541,7 @@ int UVCps::commitState() {
 *
 * @return 0 if successful
 */
-int UVCps::revertToLastCommit() {
+int UVCmultiaxial::revertToLastCommit() {
   strainTrial = strainConverged;
   strainPlasticTrial = strainPlasticConverged;
   strainPEqTrial = strainPEqConverged;
@@ -596,11 +557,12 @@ int UVCps::revertToLastCommit() {
 *
 * @return 0 if successful
 */
-int UVCps::revertToStart() {
+int UVCmultiaxial::revertToStart() {
   strainConverged.Zero();
   strainPlasticConverged.Zero();
   strainPEqConverged = 0.;
   stressConverged.Zero();
+  flowNormal.Zero();
   plasticLoading = false;
   stiffnessConverged.Zero();
   for (unsigned int i = 0; i < nBackstresses; ++i) {
@@ -618,10 +580,10 @@ int UVCps::revertToStart() {
 *
 * This is called by GenericSectionXD
 */
-NDMaterial* UVCps::getCopy() {
+NDMaterial* UVCmultiaxial::getCopy() {
 
-  UVCps* theCopy;
-  theCopy = new UVCps(this->getTag(), elasticModulus, poissonRatio,
+  UVCmultiaxial* theCopy;
+  theCopy = new UVCmultiaxial(this->getTag(), elasticModulus, poissonRatio,
     initialYield, qInf, bIso,
     dInf, aIso,
     cK, gammaK);
@@ -639,6 +601,7 @@ NDMaterial* UVCps::getCopy() {
   theCopy->alphaKTrial = alphaKTrial;
   theCopy->stiffnessConverged = stiffnessConverged;
   theCopy->stiffnessTrial = stiffnessTrial;
+  theCopy->flowNormal = flowNormal;
   theCopy->plasticLoading = plasticLoading;
 
   return theCopy;
@@ -653,18 +616,18 @@ NDMaterial* UVCps::getCopy() {
 *
 * This is called by the continuum elements.
 */
-NDMaterial* UVCps::getCopy(const char *code) {
+NDMaterial* UVCmultiaxial::getCopy(const char *code) {
   if (strcmp(code, getType()) == 0) {
-    UVCps* theCopy;
-    theCopy = new UVCps(this->getTag(), elasticModulus, poissonRatio,
+    UVCmultiaxial* theCopy;
+    theCopy = new UVCmultiaxial(this->getTag(), elasticModulus, poissonRatio,
       initialYield, qInf, bIso,
       dInf, aIso,
       cK, gammaK);
     return theCopy;
   }
   else {
-    // todo: output to opserr
-    std::cerr << "UVCps::getCopy invalid NDMaterial type, expecting " << code << std::endl;
+    // todo: change to opserr
+    std::cerr << "UVCmultiaxial::getCopy invalid NDMaterial type, expecting " << code << std::endl;
     return 0;
   }
 }
@@ -677,7 +640,7 @@ NDMaterial* UVCps::getCopy(const char *code) {
 * @param theChannel
 * @return 0 if successful
 */
-int UVCps::sendSelf(int commitTag, Channel &theChannel) {
+int UVCmultiaxial::sendSelf(int commitTag, Channel &theChannel) {
 
   /*
   static Vector data(26);  // enough space for 4 backstresses
@@ -711,12 +674,12 @@ int UVCps::sendSelf(int commitTag, Channel &theChannel) {
   data(25) = this->getTag();
 
   if (theChannel.sendVector(this->getDbTag(), commitTag, data) < 0) {
-  opserr << "UVCps::sendSelf() - failed to sendSelf\n";
+  opserr << "UVCmultiaxial::sendSelf() - failed to sendSelf\n";
   return -1;
   }
   */
 
-  opserr << "Fatal: Paralleliziation for UVCps is not implemented yet!" << endln;
+  opserr << "Fatal: Paralleliziation for UVCmultiaxial is not implemented yet!" << endln;
   return -1;
 }
 
@@ -729,13 +692,13 @@ int UVCps::sendSelf(int commitTag, Channel &theChannel) {
 * @param theBroker
 * @return 0 if successful
 */
-int UVCps::recvSelf(int commitTag, Channel &theChannel,
+int UVCmultiaxial::recvSelf(int commitTag, Channel &theChannel,
   FEM_ObjectBroker &theBroker) {
   /*
   static Vector data(26);
 
   if (theChannel.recvVector(this->getDbTag(), commitTag, data) < 0) {
-  opserr << "UVCps::recvSelf() - failed to recvSelf\n";
+  opserr << "UVCmultiaxial::recvSelf() - failed to recvSelf\n";
   return -1;
   }
 
@@ -772,7 +735,7 @@ int UVCps::recvSelf(int commitTag, Channel &theChannel,
   revertToLastCommit();
   */
 
-  opserr << "Fatal: Paralleliziation for UVCps is not implemented yet!" << endln;
+  opserr << "Fatal: Paralleliziation for UVCmultiaxial is not implemented yet!" << endln;
   return -1;
 }
 
@@ -784,12 +747,12 @@ int UVCps::recvSelf(int commitTag, Channel &theChannel,
 * @param flag is 2 for standard output, 25000 for JSON output
 (see OPS_Globals.h)
 */
-void UVCps::Print(OPS_Stream &s, int flag) {
+void UVCmultiaxial::Print(OPS_Stream &s, int flag) {
 
   // todo: change these back when not only .dll
   // if (flag == OPS_PRINT_PRINTMODEL_MATERIAL) {
   if (flag == 2) {
-    s << "UVCps tag: " << this->getTag() << endln;
+    s << "UVCmultiaxial tag: " << this->getTag() << endln;
     s << "   E: " << elasticModulus << " ";
     s << "  fy: " << initialYield << " ";
     s << "   Q: " << qInf << " ";
@@ -804,7 +767,7 @@ void UVCps::Print(OPS_Stream &s, int flag) {
   if (flag == 25000) {
     s << "\t\t\t{";
     s << "\"name\": \"" << this->getTag() << "\", ";
-    s << "\"type\": \"UVCps\", ";
+    s << "\"type\": \"UVCmultiaxial\", ";
     s << "\"E\": " << elasticModulus << ", ";
     s << "\"fy\": " << initialYield << ", ";
     s << "\"Q\": " << qInf << ", ";
@@ -819,102 +782,56 @@ void UVCps::Print(OPS_Stream &s, int flag) {
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-void UVCps::calculateElasticStiffness() {
-  double eDenom = elasticModulus / (1. - pow(poissonRatio, 2));
-  elasticMatrix.Zero();
-  elasticMatrix(0, 0) = elasticMatrix(1, 1) = 1.0 * eDenom;
-  elasticMatrix(1, 0) = elasticMatrix(0, 1) = poissonRatio * eDenom;
-  elasticMatrix(2, 2) = (1. - poissonRatio) / 2. * eDenom;
-}
-
-/* ----------------------------------------------------------------------------------------------------------------- */
-
-Matrix UVCps::calculateComplianceMatrix() {
-  double eDenom = elasticModulus;
-  Matrix complianceMatrix = Matrix(N_DIMS, N_DIMS);
-  complianceMatrix.Zero();
-  complianceMatrix(0, 0) = complianceMatrix(1, 1) = 1.0 / eDenom;
-  complianceMatrix(1, 0) = complianceMatrix(0, 1) = -poissonRatio / eDenom;
-  complianceMatrix(2, 2) = 2. * (1. + poissonRatio) / eDenom;
-  return complianceMatrix;
-}
-
-/* ----------------------------------------------------------------------------------------------------------------- */
-
-void UVCps::initializeEigendecompositions() {
-
-  // Orthogonal matrix (eigenvectors)
-  double qDenom = sqrt(2.);
-  qMat.Zero();
-  qMat(0, 0) = 1. / qDenom;  qMat(0, 1) = -1. / qDenom; qMat(0, 2) = 0;
-  qMat(1, 0) = 1. / qDenom;  qMat(1, 1) = 1. / qDenom; qMat(1, 2) = 0;
-  qMat(2, 0) = 0;  qMat(2, 1) = 0; qMat(2, 2) = 1.;
-  // Transpose
-  qMatT.Zero();
-  qMatT.addMatrixTranspose(0., qMat, 1.0);
-
-  // Projection matrix
-  pMat.Zero();
-  pMat(0, 0) = pMat(1, 1) = 2. / 3.;
-  pMat(1, 0) = pMat(0, 1) = -1. / 3.;
-  pMat(2, 2) = 2.;
-  lambdaP.Zero();
-  lambdaP(0) = 1. / 3.;
-  lambdaP(1) = 1.;
-  lambdaP(2) = 2.;
-
-  // Elastic matrix, diagonal
-  lambdaC.Zero();
-  lambdaC(0) = elasticModulus / (1. - poissonRatio);
-  lambdaC(1) = 2. * shearModulus;
-  lambdaC(2) = shearModulus;
+void UVCmultiaxial::calculateElasticStiffness() {
+  double id2OutId2;
+  // 2nd order identity tensor
+  std::vector<double> id2 = { 1.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
+  // Symmetric 4th order identity tensor
+  Matrix id4 = Matrix(N_DIMS, N_DIMS);
+  for (unsigned int i = 0; i < N_DIRECT; ++i)
+    id4(i, i) = 1.0;
+  for (unsigned int i = N_DIRECT; i < N_DIMS; ++i)
+    id4(i, i) = 1.0 / 2.0;
+  for (unsigned int i = 0; i < N_DIMS; ++i) {
+    for (unsigned int j = 0; j < N_DIMS; ++j) {
+      id2OutId2 = id2[i] * id2[j];
+      elasticMatrix(i, j) = id2OutId2 * bulkModulus + 2. * shearModulus * (id4(i, j) - 1. / 3. * id2OutId2);
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
 /**
 *
-* @param v1 length 3 vector
-* @param v2 length 3 vector
-* @return the dot product of the two vectors
+* @param v1 vector of length 6 that represents a symmetric 2nd order tensor
+* @param v2 vector of length 6 that represents a symmetric 2nd order tensor
+* @return the dot product of v1 and v2
 *
+* This function assumes that the last 3 components represent the symmetric terms.
 */
-double UVCps::dotprod3(const Vector &v1, const Vector &v2) {
-  double res = 0.;
-  for (unsigned int i = 0; i < N_DIMS; ++i)
-    res += v1(i) * v2(i);
-  return res;
+double UVCmultiaxial::dotprod6(Vector v1, Vector v2) {
+  double val = 0.;
+  for (unsigned int i = 0; i < N_DIRECT; ++i)
+    val += v1[i] * v2[i];
+  for (unsigned int i = N_DIRECT; i < N_DIMS; ++i)
+    val += 2.0 * (v1[i] * v2[i]);
+  return val;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-/**
-*
-* @param v1 length 3 vector
-* @param v2 length 3 vector
-* @return vector containing the component-wise multiplication of the two vectors
-*
-*/
-Vector UVCps::vecMult3(const Vector &v1, const Vector &v2) {
-  Vector res = Vector(N_DIMS);
-  for (unsigned int i = 0; i < N_DIMS; ++i)
-    res(i) = v1(i) * v2(i);
-  return res;
-}
-
-/* ----------------------------------------------------------------------------------------------------------------- */
-
-double UVCps::calculateYieldStress() {
+// todo: these methods should inherit from a mother class for multiaxial and plane stress -> wont work for dll?
+double UVCmultiaxial::calculateYieldStress() {
   double sigmaY1, sigmaY2;
   sigmaY1 = qInf * (1. - exp(-bIso * strainPEqTrial));
   sigmaY2 = dInf * (1. - exp(-aIso * strainPEqTrial));
   return initialYield + sigmaY1 - sigmaY2;
 }
 
-
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-double UVCps::calculateIsotropicModulus(){
+double UVCmultiaxial::calculateIsotropicModulus(){
   double sigmaY1, sigmaY2;
   sigmaY1 = qInf * (1. - exp(-bIso * strainPEqTrial));
   sigmaY2 = dInf * (1. - exp(-aIso * strainPEqTrial));
@@ -929,40 +846,8 @@ double UVCps::calculateIsotropicModulus(){
 * @return computed eK factor
 *
 */
-double UVCps::calculateEk(unsigned int i) {
+double UVCmultiaxial::calculateEk(unsigned int i) {
   return exp(-gammaK[i] * (strainPEqTrial - strainPEqConverged));
-}
-
-/* ----------------------------------------------------------------------------------------------------------------- */
-
-/**
-*
-* @param A a 3x3 invertible matrix
-* @return the inverse of A
-*
-*/
-Matrix UVCps::matinv3(const Matrix &A) {
-  double detInv;
-  Matrix B = Matrix(3, 3);
-
-  // Calculate the determinant
-  detInv = 1. /
-    (A(0, 0)*A(1, 1)*A(2, 2) - A(0, 0)*A(1, 2)*A(2, 1)
-    - A(0, 1)*A(1, 0)*A(2, 2) + A(0, 1)*A(1, 2)*A(2, 0)
-    + A(0, 2)*A(1, 0)*A(2, 1) - A(0, 2)*A(1, 1)*A(2, 0));
-
-  // Calculate the inverse
-  B(0, 0) = +detInv * (A(1, 1)*A(2, 2) - A(1, 2)*A(2, 1));
-  B(1, 0) = -detInv * (A(1, 0)*A(2, 2) - A(1, 2)*A(2, 0));
-  B(2, 0) = +detInv * (A(1, 0)*A(2, 1) - A(1, 1)*A(2, 0));
-  B(0, 1) = -detInv * (A(0, 1)*A(2, 2) - A(0, 2)*A(2, 1));
-  B(1, 1) = +detInv * (A(0, 0)*A(2, 2) - A(0, 2)*A(2, 0));
-  B(2, 1) = -detInv * (A(0, 0)*A(2, 1) - A(0, 1)*A(2, 0));
-  B(0, 2) = +detInv * (A(0, 1)*A(1, 2) - A(0, 2)*A(1, 1));
-  B(1, 2) = -detInv * (A(0, 0)*A(1, 2) - A(0, 2)*A(1, 0));
-  B(2, 2) = +detInv * (A(0, 0)*A(1, 1) - A(0, 1)*A(1, 0));
-
-  return B;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
