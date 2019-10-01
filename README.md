@@ -2,7 +2,7 @@
 
 Updated Voce-Chaboche (UVC) material model to model mild structural steel materials.
 
-The updated Voce-Chaobche material model combines the nonlinear kinematic hardening rule of Chaboche with an refined formulation of the nonlinear isotropic hardening law of Voce.
+The Updated Voce-Chaobche material model combines the nonlinear kinematic hardening rule of Chaboche with an refined formulation of the nonlinear isotropic hardening law of Voce.
 This constitutive model is intended to be used for mild structural steels subjected to cyclic loading.
 Notably, accounting for the discontinuous yielding phenomenon is shown to influence the buckling modes of steel wide-flange columns subjected to multi-axis cyclic loading.
 Material models are provided for a variety of stress states, the implementations are shown to have similar, if not better, efficiency in terms of model convergence than the built-in nonlinear isotropic/kinematic model in Abaqus.
@@ -37,4 +37,5 @@ This project is licensed under the MIT License - see the `LICENSE.md` file for d
 
 ## References
 [1] Hartloper, de Castro e Sousa, and Lignos (2019). "A Nonlinear Isotropic/Kinematic Hardening Model for Materials with Discontinuous Yielding". Technical Report.
+
 [2] Hartloper, de Castro e Sousa, and Lignos (2019). "Sensitivity of Simulated Steel Column Instabilities to Plasticity Model Assumptions", Proceedings of the 12th Canadian Conference on Earthquake Engineering, Quebec City, QC, Canada
