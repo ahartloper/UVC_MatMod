@@ -29,7 +29,7 @@ Code written and maintained by Alex Hartloper (alexander.hartloper@epfl.ch).
 
 ## License
 
-This project is licensed under the MIT License - see the `LICENSE.md` file for details.
+This project is licensed under the MIT License - see the `LICENSE` file for details.
 
 ## Acknowledgments
 
