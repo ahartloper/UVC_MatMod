@@ -88,10 +88,10 @@ private:
 
 private:
   // Parameters
-  const unsigned int N_BASIC_PARAMS = 4;
-  const unsigned int N_PARAM_PER_BACK = 2;
+  const int N_BASIC_PARAMS = 4;
+  const int N_PARAM_PER_BACK = 2;
   const double RETURN_MAP_TOL = 10.0e-10;
-  const unsigned int MAXIMUM_ITERATIONS = 1000;
+  const int MAXIMUM_ITERATIONS = 1000;
 
   // Material properties, set by the constructor
   double elasticModulus;
@@ -103,7 +103,7 @@ private:
   double stiffnessInitial;
   std::vector<double> cK;
   std::vector<double> gammaK;
-  unsigned int nBackstresses;
+  int nBackstresses;
 
   // Internal variables
   double strainConverged;

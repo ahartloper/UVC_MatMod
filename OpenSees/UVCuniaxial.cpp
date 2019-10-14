@@ -14,40 +14,25 @@
 #include <elementAPI.h>
 #include <OPS_Globals.h>
 
-/* ------------------------------------------------------------------------ */
-// For shared library usage
-// todo: make the definition if Linux
-#ifdef _USRDLL
-#define OPS_Export extern "C" __declspec(dllexport)
-#elif _MACOSX
-#define OPS_Export extern "C" __attribute__((visibility("default")))
-#else
-#define OPS_Export
-#endif
-
-
-/* ------------------------------------------------------------------------ */
-
 static int numUVCuniaxial = 0;
 
 // NOTE: Do not use the OPS_GetNumRemainingInputArgs() function or the
 // OPS_GetString() function: causes crash with .dll
-OPS_Export
-void* OPS_UVCuniaxial() {
+void* OPS_UVCuniaxial(void) {
   if (numUVCuniaxial == 0) {
-    std::cout << "Using the UVCuniaxial material, see "
-      "https://www.epfl.ch/labs/resslab/resslab-tools/" << std::endl;
+    opserr << "Using the UVCuniaxial material, see "
+      "https://www.epfl.ch/labs/resslab/resslab-tools/" << endln;
     numUVCuniaxial++;
   }
   UniaxialMaterial* theMaterial = 0;
 
   // Parameters for parsing
-  const unsigned int N_TAGS = 1;
-  const unsigned int N_BASIC_PROPERTIES = 4;
-  const unsigned int N_UPDATED_PROPERTIES = 2;
-  const unsigned int N_PARAM_PER_BACK = 2;
-  const unsigned int MAX_BACKSTRESSES = 8;
-  const unsigned int BACKSTRESS_SPACE = MAX_BACKSTRESSES * N_PARAM_PER_BACK;
+  const int N_TAGS = 1;
+  const int N_BASIC_PROPERTIES = 4;
+  const int N_UPDATED_PROPERTIES = 2;
+  const int N_PARAM_PER_BACK = 2;
+  const int MAX_BACKSTRESSES = 8;
+  const int BACKSTRESS_SPACE = MAX_BACKSTRESSES * N_PARAM_PER_BACK;
 
   std::string inputInstructions = "Invalid args, want:\n"
     "uniaxialMaterial UVCuniaxial "
@@ -107,7 +92,7 @@ void* OPS_UVCuniaxial() {
     return 0;
   }
   // cK's alternate with gammaK's
-  for (unsigned int i = 0; i < nBackstresses[0]; ++i) {
+  for (int i = 0; i < nBackstresses[0]; ++i) {
     cK.push_back(backstressProps[2 * i]);
     gammaK.push_back(backstressProps[1 + 2 * i]);
   }
@@ -142,7 +127,7 @@ void* OPS_UVCuniaxial() {
 UVCuniaxial::UVCuniaxial(int tag, double E, double sy0, double qInf, double b,
   double dInf, double a,
   std::vector<double> cK, std::vector<double> gammaK)
-  : UniaxialMaterial(tag, MAT_TAG_RESSCppLab),
+  : UniaxialMaterial(tag, MAT_TAG_UVCuniaxial),
   elasticModulus(E),
   yieldStress(sy0),
   qInf(qInf),
@@ -159,10 +144,12 @@ UVCuniaxial::UVCuniaxial(int tag, double E, double sy0, double qInf, double b,
   stressTrial(0.),
   stiffnessInitial(E),
   stiffnessConverged(E),
-  stiffnessTrial(E)
+  stiffnessTrial(E),
+  flowDirection(0.),
+  plasticLoading(false)
 {
   nBackstresses = cK.size();
-  for (unsigned int i = 0; i < nBackstresses; ++i) {
+  for (int i = 0; i < nBackstresses; ++i) {
     alphaKTrial.push_back(0.);
     alphaKConverged.push_back(0.);
   }
@@ -180,11 +167,11 @@ UVCuniaxial::~UVCuniaxial() {
  *
  * @param strainIncrement change in strain from the converged strain value
  */
-void UVCuniaxial::returnMapping(double strainIncrement){
+void UVCuniaxial::returnMapping(double strainIncrement) {
 
   // Initialize all the variables
   bool converged = true;
-  unsigned int iterationNumber = 0;
+  int iterationNumber = 0;
   double sigmaY1 = 0.;
   double sigmaY2 = 0.;
   double dit = 0.;
@@ -197,7 +184,7 @@ void UVCuniaxial::returnMapping(double strainIncrement){
   double ePEq = strainPEqConverged;
 
   // Yield criteria
-  for (unsigned int i = 0; i < nBackstresses; ++i) {
+  for (int i = 0; i < nBackstresses; ++i) {
     alpha += alphaKConverged[i];
   }
   sigmaY1 = qInf * (1. - exp(-bIso * ePEq));
@@ -215,7 +202,7 @@ void UVCuniaxial::returnMapping(double strainIncrement){
     iterationNumber++;
 
     aux = elasticModulus;
-    for (unsigned int i = 0; i < nBackstresses; ++i) {
+    for (int i = 0; i < nBackstresses; ++i) {
       aux = aux + sgn<double>(stressRadius) * cK[i] -
         gammaK[i] * alphaKTrial[i];
     }
@@ -240,7 +227,7 @@ void UVCuniaxial::returnMapping(double strainIncrement){
     sy = yieldStress + sigmaY1 - sigmaY2;
 
     alpha = 0.;
-    for (unsigned int i = 0; i < nBackstresses; ++i) {
+    for (int i = 0; i < nBackstresses; ++i) {
       alphaKTrial[i] = sgn<double>(stressRadius) * cK[i] / gammaK[i] -
         (sgn<double>(stressRadius) * cK[i] / gammaK[i] - alphaKConverged[i]) *
         exp(-gammaK[i] * (ePEq - strainPEqConverged));
@@ -257,10 +244,9 @@ void UVCuniaxial::returnMapping(double strainIncrement){
 
   // Warn the user if the algorithm did not converge
   if (iterationNumber == MAXIMUM_ITERATIONS - 1) {
-    std::cerr << "WARNING: return mapping in UVCuniaxial does not converge!"
-      << endln;
-    std::cerr << "\tExiting with phi = " << phi << " > " << RETURN_MAP_TOL
-      << std::endl;
+    opserr << "WARNING: return mapping in UVCuniaxial does not converge!" << endln;
+    opserr << "\tStrain increment = " << strainIncrement << endln;
+    opserr << "\tExiting with phi = " << phi << " > " << RETURN_MAP_TOL << endln;
   }
 
   // Condition for plastic loading is whether or not iterations were performed
@@ -290,7 +276,7 @@ void UVCuniaxial::calculateStiffness() {
 
     plasticModulus = bIso * (qInf - sigmaY1) -
       aIso * (dInf - sigmaY2);
-    for (unsigned int i = 0; i < nBackstresses; ++i) {
+    for (int i = 0; i < nBackstresses; ++i) {
       plasticModulus += gammaK[i] *
         (cK[i] / gammaK[i] - flowDirection * alphaKTrial[i]);
     }
@@ -389,7 +375,7 @@ int UVCuniaxial::revertToStart() {
   strainPEqConverged = 0.;
   stressConverged = 0.;
   stiffnessConverged = 0.;
-  for (unsigned int i = 0; i < nBackstresses; ++i) {
+  for (int i = 0; i < nBackstresses; ++i) {
     alphaKConverged[i] = 0.;
   }
   revertToLastCommit();
@@ -436,7 +422,7 @@ UniaxialMaterial* UVCuniaxial::getCopy() {
  * @param theChannel
  * @return 0 if successful
  */
-int UVCuniaxial::sendSelf(int commitTag, Channel &theChannel) {
+int UVCuniaxial::sendSelf(int commitTag, Channel& theChannel) {
 
   static Vector data(26);  // enough space for 4 backstresses
   // Material properties
@@ -457,10 +443,10 @@ int UVCuniaxial::sendSelf(int commitTag, Channel &theChannel) {
   data(12) = plasticLoading;
 
   // Kinematic hardening related, 12 total spaces required
-  unsigned int cKStart = 13;  // starts at the 13th space
-  unsigned int gammaKStart = cKStart + nBackstresses;
-  unsigned int alpha_k_start = gammaKStart + nBackstresses;
-  for (unsigned int i = 0; i < nBackstresses; ++i) {
+  int cKStart = 13;  // starts at the 13th space
+  int gammaKStart = cKStart + nBackstresses;
+  int alpha_k_start = gammaKStart + nBackstresses;
+  for (int i = 0; i < nBackstresses; ++i) {
     data(cKStart + i) = cK[i];
     data(gammaKStart + i) = gammaK[i];
     data(alpha_k_start + i) = alphaKConverged[i];
@@ -484,8 +470,8 @@ int UVCuniaxial::sendSelf(int commitTag, Channel &theChannel) {
  * @param theBroker
  * @return 0 if successful
  */
-int UVCuniaxial::recvSelf(int commitTag, Channel &theChannel,
-  FEM_ObjectBroker &theBroker) {
+int UVCuniaxial::recvSelf(int commitTag, Channel& theChannel,
+  FEM_ObjectBroker& theBroker) {
   static Vector data(26);
 
   if (theChannel.recvVector(this->getDbTag(), commitTag, data) < 0) {
@@ -511,10 +497,10 @@ int UVCuniaxial::recvSelf(int commitTag, Channel &theChannel,
   plasticLoading = bool(data(12));
 
   // Kinematic hardening related, 12 total spaces required
-  unsigned int cKStart = 13;  // starts at the 13th space
-  unsigned int gammaKStart = cKStart + nBackstresses;
-  unsigned int alpha_k_start = gammaKStart + nBackstresses;
-  for (unsigned int i = 0; i < nBackstresses; ++i) {
+  int cKStart = 13;  // starts at the 13th space
+  int gammaKStart = cKStart + nBackstresses;
+  int alpha_k_start = gammaKStart + nBackstresses;
+  for (int i = 0; i < nBackstresses; ++i) {
     cK[i] = (cKStart + i);
     gammaK[i] = (gammaKStart + i);
     alphaKConverged[i] = (alpha_k_start + i);
@@ -536,7 +522,7 @@ int UVCuniaxial::recvSelf(int commitTag, Channel &theChannel,
  * @param flag is 2 for standard output, 25000 for JSON output
  (see OPS_Globals.h)
  */
-void UVCuniaxial::Print(OPS_Stream &s, int flag) {
+void UVCuniaxial::Print(OPS_Stream& s, int flag) {
 
   // todo: change these back when not only .dll
   // if (flag == OPS_PRINT_PRINTMODEL_MATERIAL) {
@@ -546,7 +532,7 @@ void UVCuniaxial::Print(OPS_Stream &s, int flag) {
     s << "  fy: " << yieldStress << " ";
     s << "   Q: " << qInf << " ";
     s << "   b: " << bIso << " ";
-    for (unsigned int i = 0; i < nBackstresses; ++i) {
+    for (int i = 0; i < nBackstresses; ++i) {
       s << "  C" << (i + 1) << ": " << cK[i] << " ";
       s << "gam" << (i + 1) << ": " << gammaK[i] << " ";
     }
@@ -561,7 +547,7 @@ void UVCuniaxial::Print(OPS_Stream &s, int flag) {
     s << "\"fy\": " << yieldStress << ", ";
     s << "\"Q\": " << qInf << ", ";
     s << "\"b\": " << bIso << ", ";
-    for (unsigned int i = 0; i < nBackstresses; ++i) {
+    for (int i = 0; i < nBackstresses; ++i) {
       s << "\"C\": " << cK[i] << ", ";
       s << "\"gam\": " << gammaK[i] << ", ";
     }

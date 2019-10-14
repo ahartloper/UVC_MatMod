@@ -15,29 +15,14 @@
 #include <elementAPI.h>
 #include <OPS_Globals.h>
 
-/* ----------------------------------------------------------------------------------------------------------------- */
-// For shared library usage
-// todo: make the definition if Linux
-#ifdef _USRDLL
-#define OPS_Export extern "C" __declspec(dllexport)
-#elif _MACOSX
-#define OPS_Export extern "C" __attribute__((visibility("default")))
-#else
-#define OPS_Export
-#endif
-
-
-/* ----------------------------------------------------------------------------------------------------------------- */
-
 static int numUVCplanestress = 0;
 
 // NOTE: Do not use the OPS_GetNumRemainingInputArgs() function or the
 // OPS_GetString() function: causes crash with .dll
-OPS_Export
 void* OPS_UVCplanestress(void) {
   if (numUVCplanestress == 0) {
-    std::cout << "Using the UVCplanestress material, see "
-      "https://www.epfl.ch/labs/resslab/resslab-tools/" << std::endl;
+    opserr << "Using the UVCplanestress material, see "
+      "https://www.epfl.ch/labs/resslab/resslab-tools/" << endln;
     numUVCplanestress++;
   }
   NDMaterial* theMaterial = 0;
@@ -145,7 +130,7 @@ UVCplanestress::UVCplanestress(int tag, double E, double poissonRatio,
   double sy0, double qInf, double b,
   double dInf, double a,
   std::vector<double> cK, std::vector<double> gammaK)
-  : NDMaterial(tag, ND_TAG_RESSCppLabPS),
+  : NDMaterial(tag, ND_TAG_UVCplanestress),
   elasticModulus(E),
   poissonRatio(poissonRatio),
   initialYield(sy0),
@@ -199,7 +184,7 @@ UVCplanestress::UVCplanestress(int tag, double E, double poissonRatio,
 /* ----------------------------------------------------------------------------------------------------------------- */
 
 UVCplanestress::UVCplanestress()
-  : NDMaterial(0, ND_TAG_RESSCppLabPS),
+  : NDMaterial(0, ND_TAG_UVCplanestress),
   elasticModulus(0.),
   poissonRatio(0.),
   initialYield(0.),
@@ -263,7 +248,7 @@ UVCplanestress::~UVCplanestress() {
 *
 * @return 0 if successful
 */
-int UVCplanestress::returnMapping(){
+int UVCplanestress::returnMapping() {
   // Initialize all the variables
   int retVal = 0;
   bool converged = true;
@@ -379,11 +364,11 @@ int UVCplanestress::returnMapping(){
 
   // Warn the user if the algorithm did not converge and return -1
   if (iterationNumber >= MAXIMUM_ITERATIONS && abs(yieldFunction) > RETURN_MAP_TOL) {
-    std::cerr << "UVCplanestress::returnMapping return mapping in UVCplanestress did not converge!" << endln;
-    std::cerr << "\tDelta epsilon 11 = " << strainTrial[0] - strainConverged[0] << std::endl;
-    std::cerr << "\tDelta epsilon 22 = " << strainTrial[1] - strainConverged[1] << std::endl;
-    std::cerr << "\tDelta epsilon 12 = " << strainTrial[3] - strainConverged[3] << std::endl;
-    std::cerr << "\tExiting with yield function = " << yieldFunction << " > " << RETURN_MAP_TOL << std::endl;
+    opserr << "UVCplanestress::returnMapping return mapping in UVCplanestress did not converge!" << endln;
+    opserr << "\tDelta epsilon 11 = " << strainTrial[0] - strainConverged[0] << endln;
+    opserr << "\tDelta epsilon 22 = " << strainTrial[1] - strainConverged[1] << endln;
+    opserr << "\tDelta epsilon 12 = " << strainTrial[3] - strainConverged[3] << endln;
+    opserr << "\tExiting with yield function = " << yieldFunction << " > " << RETURN_MAP_TOL << endln;
     retVal = -1;
   }
 
@@ -392,7 +377,7 @@ int UVCplanestress::returnMapping(){
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-void UVCplanestress::calculateStiffness(double consistParam, double fBar, const Vector &stressRelative) {
+void UVCplanestress::calculateStiffness(double consistParam, double fBar, const Vector& stressRelative) {
   if (!plasticLoading) {
     stiffnessTrial = elasticMatrix;
   }
@@ -450,7 +435,7 @@ void UVCplanestress::calculateStiffness(double consistParam, double fBar, const 
 * @param v new total strain vector.
 * @return 0 if successful, -1 if return mapping did not converge.
 */
-int UVCplanestress::setTrialStrain(const Vector &v) {
+int UVCplanestress::setTrialStrain(const Vector& v) {
 
   int rm_convergence;
   // Reset the trial state
@@ -475,7 +460,7 @@ int UVCplanestress::setTrialStrain(const Vector &v) {
 *
 * Note that this material model is rate independent.
 */
-int UVCplanestress::setTrialStrain(const Vector &v, const Vector &r) {
+int UVCplanestress::setTrialStrain(const Vector& v, const Vector& r) {
 
   // Reset the trial state
   revertToLastCommit();
@@ -496,7 +481,7 @@ int UVCplanestress::setTrialStrain(const Vector &v, const Vector &r) {
 * @param v strain increment vector
 * @return 0 if successful
 */
-int UVCplanestress::setTrialStrainIncr(const Vector &v) {
+int UVCplanestress::setTrialStrainIncr(const Vector& v) {
 
   // Reset the trial state
   revertToLastCommit();
@@ -520,7 +505,7 @@ int UVCplanestress::setTrialStrainIncr(const Vector &v) {
 *
 * Note that this material model is rate independent.
 */
-int UVCplanestress::setTrialStrainIncr(const Vector &v, const Vector &r) {
+int UVCplanestress::setTrialStrainIncr(const Vector& v, const Vector& r) {
 
   // Reset the trial state
   revertToLastCommit();
@@ -537,25 +522,25 @@ int UVCplanestress::setTrialStrainIncr(const Vector &v, const Vector &r) {
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-const Vector &UVCplanestress::getStrain() {
+const Vector& UVCplanestress::getStrain() {
   return strainTrial;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-const Vector &UVCplanestress::getStress() {
+const Vector& UVCplanestress::getStress() {
   return stressTrial;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-const Matrix &UVCplanestress::getTangent() {
+const Matrix& UVCplanestress::getTangent() {
   return stiffnessTrial;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-const Matrix &UVCplanestress::getInitialTangent() {
+const Matrix& UVCplanestress::getInitialTangent() {
   // todo: can make more efficient by changing this to elasticMatrix and removing stiffnessInitial as a variable
   return stiffnessInitial;
 }
@@ -655,7 +640,7 @@ NDMaterial* UVCplanestress::getCopy() {
 *
 * This is called by the continuum elements.
 */
-NDMaterial* UVCplanestress::getCopy(const char *code) {
+NDMaterial* UVCplanestress::getCopy(const char* code) {
   if (strcmp(code, getType()) == 0) {
     UVCplanestress* theCopy;
     theCopy = new UVCplanestress(this->getTag(), elasticModulus, poissonRatio,
@@ -666,7 +651,7 @@ NDMaterial* UVCplanestress::getCopy(const char *code) {
   }
   else {
     // todo: output to opserr
-    std::cerr << "UVCplanestress::getCopy invalid NDMaterial type, expecting " << code << std::endl;
+    opserr << "UVCplanestress::getCopy invalid NDMaterial type, expecting " << code << endln;
     return 0;
   }
 }
@@ -679,7 +664,7 @@ NDMaterial* UVCplanestress::getCopy(const char *code) {
 * @param theChannel
 * @return 0 if successful
 */
-int UVCplanestress::sendSelf(int commitTag, Channel &theChannel) {
+int UVCplanestress::sendSelf(int commitTag, Channel& theChannel) {
 
   /*
   static Vector data(26);  // enough space for 4 backstresses
@@ -731,8 +716,8 @@ int UVCplanestress::sendSelf(int commitTag, Channel &theChannel) {
 * @param theBroker
 * @return 0 if successful
 */
-int UVCplanestress::recvSelf(int commitTag, Channel &theChannel,
-  FEM_ObjectBroker &theBroker) {
+int UVCplanestress::recvSelf(int commitTag, Channel& theChannel,
+  FEM_ObjectBroker& theBroker) {
   /*
   static Vector data(26);
 
@@ -786,7 +771,7 @@ int UVCplanestress::recvSelf(int commitTag, Channel &theChannel,
 * @param flag is 2 for standard output, 25000 for JSON output
 (see OPS_Globals.h)
 */
-void UVCplanestress::Print(OPS_Stream &s, int flag) {
+void UVCplanestress::Print(OPS_Stream& s, int flag) {
 
   // todo: change these back when not only .dll
   // if (flag == OPS_PRINT_PRINTMODEL_MATERIAL) {
@@ -881,7 +866,7 @@ void UVCplanestress::initializeEigendecompositions() {
 * @return the dot product of the two vectors
 *
 */
-double UVCplanestress::dotprod3(const Vector &v1, const Vector &v2) {
+double UVCplanestress::dotprod3(const Vector& v1, const Vector& v2) {
   double res = 0.;
   for (unsigned int i = 0; i < N_DIMS; ++i)
     res += v1(i) * v2(i);
@@ -897,7 +882,7 @@ double UVCplanestress::dotprod3(const Vector &v1, const Vector &v2) {
 * @return vector containing the component-wise multiplication of the two vectors
 *
 */
-Vector UVCplanestress::vecMult3(const Vector &v1, const Vector &v2) {
+Vector UVCplanestress::vecMult3(const Vector& v1, const Vector& v2) {
   Vector res = Vector(N_DIMS);
   for (unsigned int i = 0; i < N_DIMS; ++i)
     res(i) = v1(i) * v2(i);
@@ -916,7 +901,7 @@ double UVCplanestress::calculateYieldStress() {
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-double UVCplanestress::calculateIsotropicModulus(){
+double UVCplanestress::calculateIsotropicModulus() {
   double sigmaY1, sigmaY2;
   sigmaY1 = qInf * (1. - exp(-bIso * strainPEqTrial));
   sigmaY2 = dInf * (1. - exp(-aIso * strainPEqTrial));
@@ -943,26 +928,26 @@ double UVCplanestress::calculateEk(unsigned int i) {
 * @return the inverse of A
 *
 */
-Matrix UVCplanestress::matinv3(const Matrix &A) {
+Matrix UVCplanestress::matinv3(const Matrix& A) {
   double detInv;
   Matrix B = Matrix(3, 3);
 
   // Calculate the determinant
   detInv = 1. /
-    (A(0, 0)*A(1, 1)*A(2, 2) - A(0, 0)*A(1, 2)*A(2, 1)
-    - A(0, 1)*A(1, 0)*A(2, 2) + A(0, 1)*A(1, 2)*A(2, 0)
-    + A(0, 2)*A(1, 0)*A(2, 1) - A(0, 2)*A(1, 1)*A(2, 0));
+    (A(0, 0) * A(1, 1) * A(2, 2) - A(0, 0) * A(1, 2) * A(2, 1)
+      - A(0, 1) * A(1, 0) * A(2, 2) + A(0, 1) * A(1, 2) * A(2, 0)
+      + A(0, 2) * A(1, 0) * A(2, 1) - A(0, 2) * A(1, 1) * A(2, 0));
 
   // Calculate the inverse
-  B(0, 0) = +detInv * (A(1, 1)*A(2, 2) - A(1, 2)*A(2, 1));
-  B(1, 0) = -detInv * (A(1, 0)*A(2, 2) - A(1, 2)*A(2, 0));
-  B(2, 0) = +detInv * (A(1, 0)*A(2, 1) - A(1, 1)*A(2, 0));
-  B(0, 1) = -detInv * (A(0, 1)*A(2, 2) - A(0, 2)*A(2, 1));
-  B(1, 1) = +detInv * (A(0, 0)*A(2, 2) - A(0, 2)*A(2, 0));
-  B(2, 1) = -detInv * (A(0, 0)*A(2, 1) - A(0, 1)*A(2, 0));
-  B(0, 2) = +detInv * (A(0, 1)*A(1, 2) - A(0, 2)*A(1, 1));
-  B(1, 2) = -detInv * (A(0, 0)*A(1, 2) - A(0, 2)*A(1, 0));
-  B(2, 2) = +detInv * (A(0, 0)*A(1, 1) - A(0, 1)*A(1, 0));
+  B(0, 0) = +detInv * (A(1, 1) * A(2, 2) - A(1, 2) * A(2, 1));
+  B(1, 0) = -detInv * (A(1, 0) * A(2, 2) - A(1, 2) * A(2, 0));
+  B(2, 0) = +detInv * (A(1, 0) * A(2, 1) - A(1, 1) * A(2, 0));
+  B(0, 1) = -detInv * (A(0, 1) * A(2, 2) - A(0, 2) * A(2, 1));
+  B(1, 1) = +detInv * (A(0, 0) * A(2, 2) - A(0, 2) * A(2, 0));
+  B(2, 1) = -detInv * (A(0, 0) * A(2, 1) - A(0, 1) * A(2, 0));
+  B(0, 2) = +detInv * (A(0, 1) * A(1, 2) - A(0, 2) * A(1, 1));
+  B(1, 2) = -detInv * (A(0, 0) * A(1, 2) - A(0, 2) * A(1, 0));
+  B(2, 2) = +detInv * (A(0, 0) * A(1, 1) - A(0, 1) * A(1, 0));
 
   return B;
 }
