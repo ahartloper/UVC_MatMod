@@ -43,7 +43,7 @@ pattern Plain 1 1 {
 # analysis
 set dt 0.005
 constraints Transformation
-test        NormDispIncr 1e-5 50 1
+test        NormDispIncr 1e-8 50 1
 algorithm   Newton
 numberer    Plain
 system      BandGeneral
