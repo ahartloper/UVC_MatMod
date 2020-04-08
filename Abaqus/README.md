@@ -69,6 +69,21 @@ For example, for two backstresses the value should be 3.
 
 Now the user material can be assigned to sections as any material included with Abaqus.
 
+#### Transverse shear stiffness
+
+The transverse shear stiffness needs to be assigned to shell elements when UMATs are used for these sections.
+- Calculate the transverse shear stiffness value according to
+```
+K13 = K23 = k * (A * G)
+```
+where A is the total area of the beam section, G = E / (2(1 + nu)) is the shear modulus and k is a correction factor.
+For I shaped sections the correction factor is k = 0.44. Factors for other cross-sections are listed in Section 29.3.3 of the Abaqus Analysis User's Guide.
+- Set the transverse shear stiffness as follows:
+```
+Sections > Edit Section > Stiffness tab > check Specify Transverse Shear
+```
+- Set the values in the boxes according to the calculated values
+
 #### Make the UMAT available to Abaqus
 
 Now that the user material and model is properly set-up, we just need to make the UMAT file available to Abaqus.
