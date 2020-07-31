@@ -1,9 +1,9 @@
-# Updated Voce-Chaboche Material Model
+# An Updated Voce-Chaboche Material Model
 
-Updated Voce-Chaboche (UVC) material model to model mild structural steel materials.
+This is the repository for an updated Voce-Chaboche (UVC) material model to model structural steel materials.
 
 The UVC material model combines the nonlinear kinematic hardening rule of Chaboche with an refined formulation of the nonlinear isotropic hardening law of Voce.
-This constitutive model is intended to be used for mild structural steels subjected to cyclic loading.
+This constitutive model is intended to be used for structural steels subjected to cyclic loading.
 Notably, accounting for the discontinuous yielding phenomenon is shown to influence the buckling modes of steel wide-flange columns subjected to multi-axis cyclic loading.
 Material models are provided for a variety of stress states, the implementations are shown to have similar, if not better, efficiency in terms of model convergence than the built-in nonlinear isotropic/kinematic model in Abaqus.
 
@@ -17,7 +17,7 @@ Detailed instructions are provided in each of the Abaqus and OpenSees directorie
 ## Usage
 
 Specific instructions for use are provided in each of the Abaqus and OpenSees directories.
-The examples used to validate the implementations are provided in both the `Abaqus/testing` and `OpenSees/testing` directores.
+The examples used to validate the implementations are provided in both the `Abaqus/testing` and `OpenSees/testing` directories.
 
 ## Contributing
 
