@@ -15,7 +15,7 @@
       6,           0.,           0.,           1.
       7,           0.,           1.,           0.
       8,           0.,           0.,           0.
-*Element, type=C3D8
+*Element, type=C3D8R
 1, 5, 6, 8, 7, 1, 2, 4, 3
 *Nset, nset=Set-1, generate
  1,  8,  1
@@ -71,8 +71,8 @@ _Surf-1_S2, S2
 *Surface, type=ELEMENT, name=Surf-2
 _Surf-2_S6, S6
 *End Assembly
-*Amplitude, name=load_path, definition=EQUALLY SPACED, fixed interval=1.
-             0.,             0.3,           -0.15,            0.15,            -0.3,             0.3
+*Amplitude, name=load_path, definition=EQUALLY SPACED, fixed interval=0.2
+ 0., 1.0, 1.5, -1.5, 2.0, -2.0, 0.
 ** 
 ** MATERIALS
 ** 
@@ -83,7 +83,6 @@ _Surf-2_S6, S6
  318.5, 11608.2,   145.2,  1026.3,     4.7
 *Cyclic Hardening, parameters
  318.5, 100.7,    8.
-**
 ** BOUNDARY CONDITIONS
 ** 
 ** Name: bottom_fix Type: Displacement/Rotation
@@ -103,18 +102,15 @@ Set-11, 3, 3
 ** 
 ** STEP: loading
 ** 
-*Step, name=loading, nlgeom=YES, inc=100000
+*Step, name=loading, nlgeom=NO, inc=100000
 *Static
-0.01, 5., 5e-10, 0.01
+0.005, 1.2, 5e-10, 0.005
 ** 
 ** BOUNDARY CONDITIONS
 ** 
 ** Name: face_load Type: Displacement/Rotation
-*Boundary, amplitude=load_path
-Set-3, 2, 2, 0.5
-** Name: face_load_x Type: Displacement/Rotation
-*Boundary, amplitude=load_path
-Set-7, 1, 1, 0.5
+*Cload, amplitude=load_path
+Set-3, 2, 79.625
 ** 
 ** CONTROLS
 ** 
@@ -137,7 +133,7 @@ Set-7, 1, 1, 0.5
 ** 
 ** FIELD OUTPUT: F-Output-1
 ** 
-*Output, field, time interval=0.01
+*Output, field, time interval=0.005
 *Node Output
 CF, RF, U
 *Element Output, directions=YES
