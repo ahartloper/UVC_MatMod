@@ -19,6 +19,8 @@ Detailed instructions are provided in each of the Abaqus and OpenSees directorie
 Specific instructions for use are provided in each of the Abaqus and OpenSees directories.
 The examples used to validate the implementations are provided in both the `Abaqus/testing` and `OpenSees/testing` directories.
 
+Material paramters can be found on the OpenSees wiki at https://opensees.berkeley.edu/wiki/index.php/UVCuniaxial_(Updated_Voce-Chaboche)
+
 ## Contributing
 
 Bug fixes can be raised by opening a new issue in the UVC_MatMod repository.
