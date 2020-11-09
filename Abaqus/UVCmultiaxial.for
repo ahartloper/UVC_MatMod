@@ -36,7 +36,7 @@ C
       REAL(8), DIMENSION(6) :: strain_tens, strain_plastic,
      1yield_normal, alpha, strain_trial, stress_relative,
      2stress_dev, ID2, stress_tens, check, dstran_tens, alpha_diff,
-     3alpha_upd
+     3alpha_upd, dpe
       ! Parameters
       INTEGER :: N_BASIC_PROPS, TERM_PER_BACK, MAX_ITERATIONS,
      1I_ALPHA
@@ -124,7 +124,8 @@ C ----------------------------------------------------------------------C
         END DO
       END DO
       ! Stress tensor
-      stress_tens = MATMUL(c_mat, (strain_tens - strain_plastic))
+      stress_tens = stress + MATMUL(c_mat, dstran)
+      !stress_tens = MATMUL(c_mat, (strain_tens - strain_plastic))
 C
       stress_hydro = SUM(stress_tens(1:3)) / THREE
       strain_trace = SUM(strain_tens(1:3))
@@ -209,10 +210,14 @@ C ----------------------------------------------------------------------C
       IF (it_num .EQ. 0) THEN  ! Elastic loading
         stress = stress_tens
       ELSE  ! Plastic loading
-        strain_plastic = strain_plastic + plastic_mult * yield_normal
-        strain_plastic(4:6) = strain_plastic(4:6) 
-     1  + plastic_mult * yield_normal(4:6)
-        stress = MATMUL(c_mat, (strain_tens - strain_plastic))
+        !strain_plastic = strain_plastic + plastic_mult * yield_normal
+        dpe = plastic_mult * yield_normal
+        dpe(4:6) = dpe(4:6) + plastic_mult * yield_normal(4:6)
+C        strain_plastic(4:6) = strain_plastic(4:6) 
+C     1  + plastic_mult * yield_normal(4:6)
+        strain_plastic = strain_plastic + dpe
+        stress = stress_tens - MATMUL(c_mat, dpe)
+        !stress = MATMUL(c_mat, (strain_tens - strain_plastic))
 C
         alpha_diff = alpha
         alpha(:) = ZERO

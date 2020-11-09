@@ -34,7 +34,7 @@ C
       REAL(8), DIMENSION(:, :), ALLOCATABLE :: alpha_k, alpha_k_i
       REAL(8), DIMENSION(:), ALLOCATABLE :: C_k, gamma_k
       ! Tensors
-      REAL(8), DIMENSION(3) :: strain_plastic,
+      REAL(8), DIMENSION(3) :: strain_plastic, dstran_p,
      1alpha, gamma_diag, alpha_tilde,alpha_tilde_prime,
      2strain, eta, eta_tilde, eta_trial, stress_trial,
      3gamma_prime_diag, stress_rel
@@ -139,7 +139,8 @@ C
 C ----------------------------------------------------------------------C
       ! Don't include e33, and calculate it later
       strain = stran + dstran
-      stress_trial = MATMUL(elastic_matrix, strain - strain_plastic)
+      stress_trial = stress + MATMUL(elastic_matrix, dstran)
+      !stress_trial = MATMUL(elastic_matrix, strain - strain_plastic)
 C
       hard_iso_Q = q_inf * (ONE - EXP(-b * ep_eq))
       hard_iso_D = d_inf * (ONE - EXP(-a * ep_eq))
@@ -258,9 +259,12 @@ C
      1      stress_rel(j)/hard_iso_total * c_k(i)/gamma_k(i)*(ONE-e_k)
           END DO
         END DO
-        strain_plastic = strain_plastic
-     1  + consist_param * MATMUL(P_mat, stress_rel)
-        stress = MATMUL(elastic_matrix, strain - strain_plastic)
+C        strain_plastic = strain_plastic
+C     1  + consist_param * MATMUL(P_mat, stress_rel)
+C        stress = MATMUL(elastic_matrix, strain - strain_plastic)
+        dstran_p = consist_param * MATMUL(P_mat, stress_rel)
+        strain_plastic = strain_plastic + dstran_p
+        stress = stress_trial - MATMUL(elastic_matrix, dstran_p)
       END IF
 C ----------------------------------------------------------------------C
 C
