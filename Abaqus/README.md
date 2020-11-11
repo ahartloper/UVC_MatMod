@@ -71,7 +71,7 @@ Now the user material can be assigned to sections as any material included with 
 
 #### Transverse shear stiffness
 
-The transverse shear stiffness needs to be assigned to shell elements when UMATs are used for these sections.
+The transverse shear stiffness needs to be assigned to beam elements when UMATs are used for these sections.
 - Calculate the transverse shear stiffness value according to
 ```
 K13 = K23 = k * (A * G)
