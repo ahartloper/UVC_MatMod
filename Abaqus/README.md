@@ -218,8 +218,8 @@ Follow the directions under Make the UMAT available to Abaqus section under UVCu
 #### Order of the state variables
 
 The equivalent plastic strain (PEEQ), plastic strain, and backstress vector can be output using `SDV, Solution dependent state variables` field output.
-The number of SDVs depends on the model considered (e.g., UVCuniaxial or UVCplanestress) and the number of backstresses.
-For UVCplanestress:
+The number of SDVs depends on the model considered and the number of backstresses.
+For UVCmultiaxial:
 - SDV(1) = equivalent plastic strain
 - SDV(2) to SDV(7) = plastic strains PE11, PE22, PE33, PE12, PE13, PE23
 - SDV(8+[3k-3])/(9+[3k-3])/(10+[3k-3])/(11+[3k-3])/(12+[3k-3])/(13+[3k-3]) = backstress components in directions 11/22/33/12/13/23 for component k
