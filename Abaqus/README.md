@@ -38,6 +38,8 @@ Details of how to calculate and specify the transverse shear stiffness for shell
 ### UVCuniaxial
 
 This UMAT (UVCuniaxial.for) should be used in elements with uniaxial stress states (e.g., beam elements).
+An alternative uniaxial version, `UVCuniaxial_IS.for`, is also provided.
+This alternative UMAT implements the Young (1972) residual stress distribution for I-shaped sections.
 
 #### Parameters
 - E: Young's modulus of the material
@@ -51,6 +53,15 @@ This UMAT (UVCuniaxial.for) should be used in elements with uniaxial stress stat
 - [C2 gamma2 C3 gamma3 ... CN gammaN] Additional backstress parameters, if CK is specified then the corresponding gammaK must also be specified. 
 N is the total number of backstress in the model.
 
+#### (Optional) Additional parameters required when using UVCuniaxial_IS
+The following values need to be specified in addition to the material parameters above only when the UVCuniaxial_IS.for UMAT is used:
+- dcl: flange-to-flange centerline depth of the section (d - tf)
+- bf: flange width
+- tf: flange thickness
+- tw: web thickness
+- npt_flange: number of integration points on each flange (Abaqus default is 5)
+- npt_web: number of integration points along the web (Abaqus default is 5)
+
 #### Set-up the user defined material
 
 - Create a user defined material, specify that the type is "Mechanical":
@@ -59,6 +70,7 @@ General > User Material
 ```
 - Set the number of parameters to be 8 + 2(N - 1).
 For example, there should be 10 parameters for 2 backstresses.
+When using UVCuniaxial_IS, the number of parameters will be 8 + (2N - 1) + 6.
 - Enter the parameters following the order listed in this Parameters section
 - Assign space for the internal variables:
 ```
