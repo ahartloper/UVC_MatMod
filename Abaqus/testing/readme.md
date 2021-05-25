@@ -10,7 +10,7 @@ E = 170800.0, nu = 0.3, sy0 = 318.5, QInfty = 100.7, b = 8.0, DInfy = 0., a = 20
 
 ## Running the tests
 
-Each of the UMAT tests are associated with a particular UMAT, the correspondance is:
+Each of the UMAT tests are associated with a particular UMAT, the correspondence is:
 - Truss-UMAT-Disp-Cyclic.inp = UVCuniaxial.for
 - Truss-UMAT-Force-Cyclic.inp = UVCuniaxial.for (force controlled problem)
 - Lamarche-1-Beam.inp = UVCuniaxial_IS.for
