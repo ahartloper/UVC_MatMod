@@ -9,7 +9,7 @@ E = 170800.0, nu = 0.3, sy0 = 318.5, QInfty = 100.7, b = 8.0, DInfy = 0., a = 20
 
 ## Running the tests
 
-First the user must create the directory `Data_Output/` in the `OpenSees/testing` directory.
+First the user must create the directory `Output_Data/` in the `OpenSees/testing` directory.
 This directory will contain all the output from the test files.
 
 Each of the tests are associated with a particular material implementation, the correspondance is:

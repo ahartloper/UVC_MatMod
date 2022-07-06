@@ -22,7 +22,7 @@ C
      1ep_eq_init, alpha_init, D, a
       ! Used for intermediate calculations
       REAL(8) :: alpha, sy, sigma, ep_eq, e_p, phi, aux, dit, dep,
-     1A_term,  yield_radius, iso_Q, iso_D
+     1A_term,  yield_radius, iso_Q, iso_D, e_p_total
       ! Vectors
       REAL, DIMENSION(:, :), ALLOCATABLE :: chab_coef
       REAL, DIMENSION(:), ALLOCATABLE :: alpha_k, alpha_k_init
@@ -88,19 +88,20 @@ C-----------------------------------------------------------------------C
         is_converged = 0
       END IF
       it_num = 0
+      e_p_total = 0.d0
       DO WHILE (is_converged .EQ. 0 .AND. it_num .LT. MAX_ITERATIONS)
         it_num = it_num + 1
 C        
         ! Determine the plastic strain increment
         aux = elastic_modulus
         DO i = 1, n_backstresses
-          aux = aux + SIGN(ONE, yield_radius) * chab_coef(i, 1) -
-     1    chab_coef(i, 2) * alpha_k(i)
+          aux = aux + chab_coef(i, 1) -
+     1    SIGN(ONE, yield_radius) * chab_coef(i, 2) * alpha_k(i)
         END DO
 C            
       dit = TWO * yield_radius * aux +
-     1TWO * sy * Q * b * EXP(-b * ep_eq) -
-     2TWO * sy * D * a * EXP(-a * ep_eq)
+     1 SIGN(ONE, yield_radius) * TWO * sy * Q * b * EXP(-b * ep_eq) -
+     2 SIGN(ONE, yield_radius) * TWO * sy * D * a * EXP(-a * ep_eq)
       dep = phi / dit
 C            
       ! Prevents newton step from overshooting
@@ -113,7 +114,8 @@ C
       ! Update variables
 C
 C-----------------------------------------------------------------------C
-      ep_eq = ep_eq + ABS(dep)
+      e_p_total = e_p_total + dep
+      ep_eq = ep_eq_init + ABS(e_p_total)
       sigma = sigma - elastic_modulus * dep
       iso_Q = Q * (ONE - EXP(-b * ep_eq))
       iso_D = D * (ONE - EXP(-a * ep_eq))
