@@ -9,6 +9,12 @@ Material models are provided for a variety of stress states, the implementations
 
 The theory and implementations of the material model are described in detail in the references below.
 
+## Changelog
+
+- 06-Jul-2022:
+  - Improve local convergence of UVCuniaxial
+  - Add additional Abaqus files for testing
+
 ## Installation
 
 Instructions for installation are specific to the choice of simulation platform.
