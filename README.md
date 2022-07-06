@@ -12,7 +12,7 @@ The theory and implementations of the material model are described in detail in 
 ## Changelog
 
 - 06-Jul-2022:
-  - Improve local convergence of UVCuniaxial
+  - Improve local convergence of UVCuniaxial (see [PR#14](https://github.com/ahartloper/UVC_MatMod/pull/14))
   - Add additional Abaqus files for testing
 
 ## Installation
