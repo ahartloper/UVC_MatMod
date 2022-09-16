@@ -11,6 +11,8 @@ The theory and implementations of the material model are described in detail in 
 
 ## Changelog
 
+- 15-Sep-2022:
+  - Add to the README.md regarding using the UMATS with Intel oneAPI and more recent version of Abaqus.
 - 06-Jul-2022:
   - Improve local convergence of UVCuniaxial (see [PR#14](https://github.com/ahartloper/UVC_MatMod/pull/14))
   - Add additional Abaqus files for testing
@@ -26,6 +28,19 @@ Specific instructions for use are provided in each of the Abaqus and OpenSees di
 The examples used to validate the implementations are provided in both the `Abaqus/testing` and `OpenSees/testing` directories.
 
 Material paramters can be found on the OpenSees wiki at https://opensees.berkeley.edu/wiki/index.php/UVCuniaxial_(Updated_Voce-Chaboche)
+
+### Abaqus 2019 and later with Intel oneAPI
+
+(Noted 15 September 2022) Note that the Abaqus UVC UMATs are not compatible in their current form with the Intel Fortran Compiler in oneAPI and recent versions of Abaqus.
+The problem is that "allocatable arrays" used to hold a variable number of backstresses no longer appear to be supported.
+This issue can be overcome by modifying the use of the allocatable arrays to be of a constant size.
+For example, assuming two (2) backstresses, by changing the lines 27-28 in UVCuniaxial.for:
+```
+27      REAL, DIMENSION(2, 2), ALLOCATABLE :: chab_coef
+28      REAL, DIMENSION(2), ALLOCATABLE :: alpha_k, alpha_k_init
+```
+and deleting lines 47-49.
+UVCplanestress.for and UVCmultiaxial.for can be similarly modified.
 
 ## Contributing
 
