@@ -34,6 +34,7 @@ The number of parameters to be specified depends on whether you are using the un
 Enhanced hourglass control is recommended for reduced integration elements, and the transverse shear stiffness needs to be calculated and specified if shell elements are used.
 Details of how to calculate and specify the transverse shear stiffness for shell elements are summarized under the UVCplanestress section.
 
+See [here](https://github.com/ahartloper/UVC_MatMod/blob/master/README.md#abaqus-2019-and-later-with-intel-oneapi) for using more recent version of Abaqus and the Intel oneAPI Fortran compiler.
 
 ### UVCuniaxial
 
