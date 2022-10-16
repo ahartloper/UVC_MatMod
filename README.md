@@ -36,8 +36,8 @@ The problem is that "allocatable arrays" used to hold a variable number of backs
 This issue can be overcome by modifying the use of the allocatable arrays to be of a constant size.
 For example, assuming two (2) backstresses, by changing the lines 27-28 in UVCuniaxial.for:
 ```
-27      REAL, DIMENSION(2, 2), ALLOCATABLE :: chab_coef
-28      REAL, DIMENSION(2), ALLOCATABLE :: alpha_k, alpha_k_init
+27      REAL, DIMENSION(2, 2) :: chab_coef
+28      REAL, DIMENSION(2) :: alpha_k, alpha_k_init
 ```
 and deleting lines 47-49.
 UVCplanestress.for and UVCmultiaxial.for can be similarly modified.
