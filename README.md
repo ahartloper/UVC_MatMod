@@ -11,6 +11,9 @@ The theory and implementations of the material model are described in detail in 
 
 ## Changelog
 
+- 02-Jun-2024:
+  - Fix updating of sigma for UVCuniaxial_IS regression from [PR#14](https://github.com/ahartloper/UVC_MatMod/pull/14)
+  - Make backstress arrays Real(8)
 - 15-Sep-2022:
   - Add to the README.md regarding using the UMATS with Intel oneAPI and more recent version of Abaqus.
 - 06-Jul-2022:
