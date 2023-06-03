@@ -128,6 +128,7 @@ C
 C-----------------------------------------------------------------------C
       e_p_total = e_p_total + dep
       ep_eq = ep_eq_init + ABS(e_p_total)
+      sigma = sigma - elastic_modulus * dep
       iso_Q = Q * (ONE - EXP(-b * ep_eq))
       iso_D = D * (ONE - EXP(-a * ep_eq))
       sy = sy_0 + iso_Q - iso_D
