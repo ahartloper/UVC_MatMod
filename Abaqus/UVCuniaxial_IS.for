@@ -24,8 +24,8 @@ C
       REAL(8) :: alpha, sy, sigma, ep_eq, e_p, phi, aux, dit, dep,
      1A_term,  yield_radius, iso_Q, iso_D, e_p_total
       ! Vectors
-      REAL, DIMENSION(:, :), ALLOCATABLE :: chab_coef
-      REAL, DIMENSION(:), ALLOCATABLE :: alpha_k, alpha_k_init
+      REAL(8), DIMENSION(:, :), ALLOCATABLE :: chab_coef
+      REAL(8), DIMENSION(:), ALLOCATABLE :: alpha_k, alpha_k_init
       ! Parameters
       INTEGER :: N_BASIC_PROPS, TERM_PER_BACK, MAX_ITERATIONS,
      1DEBUG_ON, n_mat_props
